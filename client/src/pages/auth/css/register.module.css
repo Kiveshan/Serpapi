@@ -91,6 +91,15 @@
   gap: 10px;
   color: #6B7280;
   background-color: #FAFAFA;
+  cursor: pointer;
+}
+
+.hiddenFileInput {
+  display: none;
+}
+
+.uploadIcon {
+  color: #9CA3AF;
 }
 
 .uploadText {
@@ -106,6 +115,13 @@
 .uploadHint {
   font-size: 10px;
   color: #9CA3AF;
+}
+
+.fileName {
+  margin-top: 4px;
+  font-size: 10px;
+  color: #00659F;
+  font-weight: 700;
 }
 
 .primaryButton {

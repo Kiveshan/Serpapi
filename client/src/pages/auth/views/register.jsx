@@ -12,6 +12,7 @@ const Register = () => {
   const [institutionEmail, setInstitutionEmail] = useState('');
   const [role, setRole] = useState('Research Admin');
   const [password, setPassword] = useState('');
+  const [certificateFile, setCertificateFile] = useState(null);
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -89,13 +90,24 @@ const Register = () => {
 
                   <div>
                     <label className={styles.label}>Certificate</label>
-                    <div className={styles.upload}>
-                      <Upload size={16} color="#9CA3AF" />
+                    <input
+                      className={styles.hiddenFileInput}
+                      id="certificate"
+                      type="file"
+                      accept="application/pdf"
+                      onChange={(e) => {
+                        const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+                        setCertificateFile(file);
+                      }}
+                    />
+                    <label className={styles.upload} htmlFor="certificate">
+                      <Upload size={16} className={styles.uploadIcon} />
                       <div className={styles.uploadText}>
                         <div className={styles.uploadTitle}>Click to upload or drag and drop</div>
                         <div className={styles.uploadHint}>PDF (max. 100MB)</div>
+                        {certificateFile ? <div className={styles.fileName}>{certificateFile.name}</div> : null}
                       </div>
-                    </div>
+                    </label>
                   </div>
                 </div>
 
