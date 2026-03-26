@@ -1,0 +1,163 @@
+.tableContainer {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+}
+
+.headerRow {
+  background-color: #BFE3F2FF;
+}
+
+.headerCell {
+  padding: 1rem 1.5rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #565E6CFF;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.headerCell:nth-child(3),
+.headerCell:nth-child(4) {
+  text-align: center;
+}
+
+.row {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s ease;
+}
+
+.row:hover {
+  background-color: #f9fafb;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.cell {
+  padding: 1rem 1.5rem;
+  font-size: 0.875rem;
+  color: #171A1FFF;
+  vertical-align: middle;
+  font-weight: 500;
+}
+
+.cell:nth-child(3),
+.cell:nth-child(4) {
+  text-align: center;
+  justify-content: center;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.pending {
+  background-color: #FEF9EEFF;
+  color: #98690CFF;
+}
+
+.approved {
+  background-color: #E6F6EC;
+  color: #1E8A3A;
+}
+
+.rejected {
+  background-color: #FCECEA;
+  color: #C53030;
+}
+
+.action {
+  background-color: #00659FFF;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.action:hover:not(:disabled) {
+  background-color: #2563eb;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.action:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.disabledAction {
+  background-color: #e5e7eb;
+  color: #9ca3af;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: not-allowed;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .headerCell {
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+  }
+  
+  .cell {
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+  }
+  
+  .statusBadge {
+    padding: 0.1875rem 0.625rem;
+    font-size: 0.6875rem;
+  }
+  
+  .action,
+  .disabledAction {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .headerCell {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.75rem;
+  }
+  
+  .cell {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.75rem;
+  }
+  
+  .statusBadge {
+    padding: 0.125rem 0.5rem;
+    font-size: 0.625rem;
+  }
+  
+  .action,
+  .disabledAction {
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+  }
+}

@@ -1,0 +1,114 @@
+.filterDropdown {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 150px;
+}
+
+.filterDropdown .label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.filterDropdown .dropdownButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  color: #1f2937;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  text-align: left;
+}
+
+.filterDropdown .dropdownButton:hover {
+  border-color: #9ca3af;
+}
+
+.filterDropdown .dropdownButton:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filterDropdown .selectedValue {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filterDropdown .chevron {
+  color: #6b7280;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+
+.filterDropdown .chevronOpen {
+  transform: rotate(180deg);
+}
+
+.filterDropdown .dropdownMenu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 50;
+  max-height: 240px;
+  overflow-y: auto;
+  margin-top: 0.25rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.filterDropdown .option {
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  color: #1f2937;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.filterDropdown .option:last-child {
+  border-bottom: none;
+}
+
+.filterDropdown .option:hover {
+  background-color: #f9fafb;
+}
+
+.filterDropdown .option.selected {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 500;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .filterDropdown {
+    min-width: 120px;
+  }
+  
+  .filterDropdown .dropdownButton {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+  
+  .filterDropdown .option {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+}
