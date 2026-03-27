@@ -26,7 +26,8 @@
 }
 
 .headerCell:nth-child(3),
-.headerCell:nth-child(4) {
+.headerCell:nth-child(4),
+.headerCell:nth-child(5) {
   text-align: center;
 }
 
@@ -52,7 +53,8 @@
 }
 
 .cell:nth-child(3),
-.cell:nth-child(4) {
+.cell:nth-child(4),
+.cell:nth-child(5) {
   text-align: center;
   justify-content: center;
 }
@@ -74,12 +76,12 @@
 
 .approved {
   background-color: #E6F6EC;
-  color: #1E8A3A;
+  color: #17A948FF;
 }
 
 .rejected {
   background-color: #FCECEA;
-  color: #C53030;
+  color: #E25256FF;
 }
 
 .action {
@@ -112,6 +114,38 @@
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
+  cursor: not-allowed;
+}
+
+.enableButton {
+  background-color: #17A948FF;
+  border: none;
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.enableButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.disableButton {
+  background-color: #E25256FF;
+  border: none;
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.disableButton:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
