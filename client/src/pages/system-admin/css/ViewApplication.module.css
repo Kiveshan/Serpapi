@@ -1,0 +1,301 @@
+.page {
+  min-height: 100vh;
+  background-color: #F9F9FBFF;
+  display: flex;
+  flex-direction: column;
+}
+
+.main {
+  flex: 1;
+  padding: 20px 0 40px 0;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+.topBar {
+  margin: 10px 0 8px 0;
+}
+
+.backButton {
+  background: transparent;
+  border: none;
+  color: #00659FFF;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 600;
+  color: #171A1FFF;
+}
+
+.subtitle {
+  margin-top: 6px;
+  color: #9096A7FF;
+  font-size: 13px;
+}
+
+.pendingPill {
+  margin-top: 18px;
+  background-color: #FEF9EEFF;
+  color: #98690CFF;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 24px;
+  margin-top: 18px;
+  align-items: stretch;
+}
+
+.gridSingle {
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+
+.leftColumn {
+  min-width: 0;
+}
+
+.leftColumnSingle {
+  width: 760px;
+  max-width: 100%;
+}
+
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  margin-bottom: 18px;
+}
+
+.cardHeader {
+  padding: 18px 20px;
+  font-weight: 600;
+  color: #171A1FFF;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.cardBody {
+  padding: 10px 20px;
+}
+
+.infoRow {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 12px;
+  padding: 14px 0;
+}
+
+.infoLabel {
+  color: #9096A7FF;
+  font-size: 13px;
+}
+
+.infoValue {
+  color: #171A1FFF;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.divider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.documentRow {
+  background: #F9F9FBFF;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.documentIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: #EEF2FFFF;
+  color: #1348E7FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.documentMeta {
+  flex: 1;
+  min-width: 0;
+}
+
+.documentName {
+  font-weight: 600;
+  color: #171A1FFF;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.documentSub {
+  margin-top: 3px;
+  font-size: 12px;
+  color: #9096A7FF;
+}
+
+.downloadButton {
+  background: #ffffff;
+  border: 1px solid #DEE1E6FF;
+  color: #171A21FF;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.decisionCard {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  padding: 18px;
+}
+
+.decisionTitle {
+  font-weight: 600;
+  text-align: center;
+  color: #171A1FFF;
+  margin-bottom: 14px;
+}
+
+.decisionActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.approveButton {
+  background: #1E8A3A;
+  border: 1px solid #1E8A3A;
+  color: #ffffff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.rejectButton {
+  background: #ffffff;
+  border: 2px solid #DC2626;
+  color: #DC2626;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.statusBanner {
+  margin-left: auto;
+  width: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-top: 4px;
+}
+
+.statusBannerLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+}
+
+.statusBannerClose {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.statusBannerApproved {
+  background: #1E8A3A;
+  color: #ffffff;
+}
+
+.statusBannerRejected {
+  background: #DC2626;
+  color: #ffffff;
+}
+
+.modalApprove {
+  background: #1E8A3A !important;
+  border-color: #1E8A3A !important;
+}
+
+.modalReject {
+  background: #DC2626 !important;
+  border-color: #DC2626 !important;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .statusBanner {
+    width: 100%;
+    margin-left: 0;
+  }
+}

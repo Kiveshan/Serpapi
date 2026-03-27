@@ -6,11 +6,24 @@
 .container {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0 32px;
   height: 56px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+}
+
+.leftSection {
+  display: flex;
+  align-items: center;
   gap: 10px;
+}
+
+.rightSection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
 }
 
 .logo {
@@ -27,4 +40,55 @@
   font-weight: 700;
   color: #0669F4;
   font-size: 16px;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.userAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #00659FFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.userInitial {
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.userName {
+  font-weight: 500;
+  color: #171A1F;
+  font-size: 14px;
+}
+
+.logoutButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #DC2626;
+  border: none;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.logoutButton:hover {
+  background-color: #B91C1C;
+}
+
+.logoutIcon {
+  color: white;
 }
