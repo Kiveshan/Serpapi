@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Filter } from 'lucide-react';
 import styles from './css/FilterDropdown.module.css';
 
 const FilterDropdown = ({ label, value, options, onChange, className = '' }) => {
@@ -25,8 +25,7 @@ const FilterDropdown = ({ label, value, options, onChange, className = '' }) => 
   };
 
   return (
-    <div className={`${styles.dropdown} ${className}`} ref={dropdownRef}>
-      <label className={styles.label}>{label}:</label>
+    <div className={`${styles.filterDropdown} ${className}`} ref={dropdownRef}>
       <button
         type="button"
         className={styles.dropdownButton}
@@ -34,7 +33,12 @@ const FilterDropdown = ({ label, value, options, onChange, className = '' }) => 
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
-        <span className={styles.selectedValue}>{value}</span>
+        <span className={styles.leftContent}>
+          <Filter size={16} className={styles.filterIcon} />
+          <span className={styles.selectedValue}>
+            {label}: {value}
+          </span>
+        </span>
         <ChevronDown 
           size={16} 
           className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ''}`}

@@ -25,7 +25,7 @@ const Registrations = () => {
         { id: 4, fullName: 'William King', role: 'Research Admin', status: 'Pending' },
     ];
 
-    const roleOptions = ['All', 'Research Admin', 'System Admin', 'Editor', 'Viewer'];
+    const roleOptions = ['All', 'Research Admin'];
     const statusOptions = ['Pending', 'Approved', 'Rejected'];
 
     const handleSearch = (term) => {
