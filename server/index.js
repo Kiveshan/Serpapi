@@ -1,6 +1,9 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const publicationsRoutes = require('./routes/publications/publications.routes');
+const { testConnection } = require('./db/db');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -19,12 +22,19 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/api/health`);
-  console.log('\n✅ SerpApi is configured and active!');
-  console.log('🔄 Will fallback to Semantic Scholar if SerpApi fails');
-  console.log('🔄 Will fallback to web scraping if both APIs fail');
-  console.log('🎯 Results are automatically filtered and ranked by relevance');
-  console.log('📅 Year-based filtering now supported!');
+  
+  const dbConnected = await testConnection();
+  if (dbConnected) {
+    console.log('\n✅ SerpApi is configured and active!');
+    console.log('🔄 Will fallback to Semantic Scholar if SerpApi fails');
+    console.log('🔄 Will fallback to web scraping if both APIs fail');
+    console.log('🎯 Results are automatically filtered and ranked by relevance');
+    console.log('📅 Year-based filtering now supported!');
+    console.log('🗄️ Database connection established');
+  } else {
+    console.log('\n⚠️ Database connection failed, but server continues running...');
+  }
 });
