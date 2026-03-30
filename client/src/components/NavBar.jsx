@@ -1,6 +1,6 @@
 import React from 'react';
-import { BookOpen } from 'lucide-react';
 import styles from './css/NavBar.module.css';
+import { Layers } from 'lucide-react';
 
 const NavBar = () => {
   return (
@@ -8,9 +8,9 @@ const NavBar = () => {
       <div className={styles.container}>
         <div className={styles.leftSection}>
           <div className={styles.logo}>
-            <BookOpen size={16} color="#ffffff" />
+            <Layers size={16} color="#ffffff" />
           </div>
-          <div className={styles.brand}>Publications</div>
+          <div className={styles.brand}>RESMA Publications</div>
         </div>
         
         <div className={styles.rightSection}>

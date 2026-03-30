@@ -5,17 +5,23 @@ const {
   advancedSearchController, 
   healthCheckController 
 } = require('../../controller/publications/publications.controller');
+const { 
+  authenticateToken, 
+  requireAnyAdmin, 
+  optionalAuth 
+} = require('../../middleware/auth');
 
-// Search publications by query
-// GET /api/search/:query
+// Public routes (no authentication required)
 router.get('/search/:query', searchPublicationsController);
-
-// Advanced search with query parameters
-// GET /api/advanced-search?q=...&author=...&title=...&year=...
 router.get('/advanced-search', advancedSearchController);
-
-// Health check endpoint
-// GET /api/health
 router.get('/health', healthCheckController);
+
+// Example of protected routes (you can uncomment these when needed)
+// router.get('/saved-searches', authenticateToken, requireAuthentication, getSavedSearchesController);
+// router.post('/save-search', authenticateToken, requireAuthentication, saveSearchController);
+// router.delete('/saved-searches/:id', authenticateToken, requireAuthentication, deleteSearchController);
+
+// Example of admin-only routes (you can uncomment these when needed)
+// router.get('/admin/search-analytics', authenticateToken, requireAnyAdmin, getSearchAnalyticsController);
 
 module.exports = router;

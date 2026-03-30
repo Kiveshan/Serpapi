@@ -1,22 +1,92 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, ArrowLeft } from 'lucide-react';
+import { Upload, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import NavBar from '../../../components/NavBar';
 import Footer from '../../../components/Footer';
 import styles from '../css/register.module.css';
+import { registerAPI } from '../../../api/register/register';
 
 const Register = () => {
   const navigate = useNavigate();
   const [fullName, setFullName] = useState('');
-  const [institution, setInstitution] = useState('');
+  const [institutionId, setInstitutionId] = useState('');
+  const [otherInstitution, setOtherInstitution] = useState('');
   const [institutionEmail, setInstitutionEmail] = useState('');
-  const [role, setRole] = useState('Research Admin');
+  const [roleId, setRoleId] = useState('');
   const [password, setPassword] = useState('');
   const [certificateFile, setCertificateFile] = useState(null);
 
-  const onSubmit = (e) => {
+  // Data from API
+  const [institutions, setInstitutions] = useState([]);
+  const [roles, setRoles] = useState([]);
+
+  // UI states
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Fetch institutions and roles on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [institutionsData, rolesData] = await Promise.all([
+          registerAPI.getInstitutions(),
+          registerAPI.getRoles()
+        ]);
+        setInstitutions(institutionsData);
+        setRoles(rolesData);
+
+        // Set default role to first available role (excluding System Admin)
+        const availableRoles = rolesData.filter(role => role.roleid !== 1);
+        if (availableRoles.length > 0) {
+          setRoleId(availableRoles[0].roleid);
+        }
+      } catch (err) {
+        setError('Failed to load form data. Please refresh the page.');
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const onSubmit = async (e) => {
     e.preventDefault();
-    navigate('/login');
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const userData = {
+        fullname: fullName,
+        institutionemail: institutionEmail,
+        password: password,
+        roleid: roleId,
+        certificatelink: certificateFile ? certificateFile.name : null
+      };
+
+      // Set institution based on selection
+      if (institutionId === 'other') {
+        userData.otherinstitution = otherInstitution;
+        userData.institutionid = null;
+      } else {
+        userData.institutionid = institutionId;
+        userData.otherinstitution = null;
+      }
+
+      const response = await registerAPI.register(userData);
+
+      setSuccess('Registration successful! Please check your email for further instructions.');
+
+      // Redirect to login after 2 seconds
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
+
+    } catch (err) {
+      setError(err.error || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -32,6 +102,21 @@ const Register = () => {
               <h1 className={styles.title}>Register</h1>
               <div className={styles.subtitle}>Submit your details to request access to the Publications platform.</div>
 
+              {/* Error and Success Messages */}
+              {error && (
+                <div className={styles.errorMessage}>
+                  <AlertCircle size={16} />
+                  {error}
+                </div>
+              )}
+              
+              {success && (
+                <div className={styles.successMessage}>
+                  <CheckCircle size={16} />
+                  {success}
+                </div>
+              )}
+
               <form onSubmit={onSubmit} className={styles.form}>
                 <div className={styles.grid}>
                   <div>
@@ -39,22 +124,45 @@ const Register = () => {
                     <input
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Jane"
+                      placeholder="Jane Smith"
                       required
                       className={styles.input}
+                      disabled={loading}
                     />
                   </div>
 
                   <div>
                     <label className={styles.label}>Institution *</label>
-                    <input
-                      value={institution}
-                      onChange={(e) => setInstitution(e.target.value)}
-                      placeholder="e.g. Stanford University"
-                      required
-                      className={styles.input}
-                    />
+                    <select 
+                      value={institutionId} 
+                      onChange={(e) => setInstitutionId(e.target.value)} 
+                      required 
+                      className={styles.select}
+                      disabled={loading}
+                    >
+                      <option value="">Select an institution</option>
+                      {institutions.map((institution) => (
+                        <option key={institution.instid} value={institution.instid}>
+                          {institution.institution}
+                        </option>
+                      ))}
+                      <option value="other">Other (specify below)</option>
+                    </select>
                   </div>
+
+                  {institutionId === 'other' && (
+                    <div>
+                      <label className={styles.label}>Other Institution *</label>
+                      <input
+                        value={otherInstitution}
+                        onChange={(e) => setOtherInstitution(e.target.value)}
+                        placeholder="Enter your institution name"
+                        required
+                        className={styles.input}
+                        disabled={loading}
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <label className={styles.label}>Institution Email *</label>
@@ -65,15 +173,25 @@ const Register = () => {
                       type="email"
                       required
                       className={styles.input}
+                      disabled={loading}
                     />
                   </div>
 
                   <div>
                     <label className={styles.label}>Role *</label>
-                    <select value={role} onChange={(e) => setRole(e.target.value)} required className={styles.select}>
-                      <option value="Research Admin">Research Admin</option>
-                      <option value="Researcher">Researcher</option>
-                      <option value="Librarian">Librarian</option>
+                    <select 
+                      value={roleId} 
+                      onChange={(e) => setRoleId(e.target.value)} 
+                      required 
+                      className={styles.select}
+                      disabled={loading}
+                    >
+                      <option value="">Select a role</option>
+                      {roles.filter(role => role.roleid !== 1).map((role) => (
+                        <option key={role.roleid} value={role.roleid}>
+                          {role.rolename}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -85,6 +203,8 @@ const Register = () => {
                       type="password"
                       required
                       className={styles.input}
+                      disabled={loading}
+                      minLength={6}
                     />
                   </div>
 
@@ -99,6 +219,7 @@ const Register = () => {
                         const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
                         setCertificateFile(file);
                       }}
+                      disabled={loading}
                     />
                     <label className={styles.upload} htmlFor="certificate">
                       <Upload size={16} className={styles.uploadIcon} />
@@ -111,12 +232,21 @@ const Register = () => {
                   </div>
                 </div>
 
-                <button type="submit" className={styles.primaryButton}>
-                  Submit registration
+                <button 
+                  type="submit" 
+                  className={styles.primaryButton}
+                  disabled={loading}
+                >
+                  {loading ? 'Submitting...' : 'Submit registration'}
                 </button>
 
                 <div className={styles.backRow}>
-                  <button type="button" onClick={() => navigate('/login')} className={styles.backButton}>
+                  <button 
+                    type="button" 
+                    onClick={() => navigate('/login')} 
+                    className={styles.backButton}
+                    disabled={loading}
+                  >
                     <ArrowLeft size={16} /> Back to login
                   </button>
                 </div>

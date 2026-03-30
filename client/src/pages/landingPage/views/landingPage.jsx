@@ -19,7 +19,7 @@ const LandingPage = () => {
           </div>
 
           <h1 className={styles.title}>
-            Refine Your
+            Capture Your
             <br />
             <span className={styles.titleAccent}>Publications</span>
           </h1>
