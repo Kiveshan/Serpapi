@@ -21,6 +21,7 @@ const Registrations = () => {
     const [dataLoading, setDataLoading] = useState(false);
     const [applications, setApplications] = useState([]);
     const [pendingCount, setPendingCount] = useState(0);
+    const [allApplications, setAllApplications] = useState([]); // Store all data for client-side filtering
 
     // Check authentication and System Admin role
     useEffect(() => {
@@ -60,6 +61,7 @@ const Registrations = () => {
             setDataLoading(true);
             const data = await applicationsAPI.getAllApplications();
             setApplications(data.applications);
+            setAllApplications(data.applications); // Store all data for client-side filtering
             setPendingCount(data.pendingCount);
         } catch (err) {
             setError('Failed to load applications. Please refresh the page.');
@@ -71,7 +73,7 @@ const Registrations = () => {
     const tableHeaders = ['Full Name', 'Role', 'Status', 'Action'];
 
     // Transform data for table
-    const tableData = applications.map((app) => ({
+    const tableData = allApplications.map((app) => ({
         id: app.userid,
         fullName: app.fullname,
         email: app.institutionemail,
@@ -81,7 +83,7 @@ const Registrations = () => {
     }));
 
     // Get unique roles for filter options
-    const uniqueRoles = [...new Set(applications.map(app => app.rolename))];
+    const uniqueRoles = [...new Set(allApplications.map(app => app.rolename))];
     const roleOptions = ['All', ...uniqueRoles];
     const statusOptions = ['All', 'Pending', 'Approved', 'Rejected'];
 
@@ -110,8 +112,8 @@ const Registrations = () => {
 
     const handleToggleEnabled = async (id) => {
         try {
-            // Find the current application
-            const currentApp = applications.find(app => app.userid === id);
+            // Find the current application from allApplications
+            const currentApp = allApplications.find(app => app.userid === id);
             if (!currentApp) return;
 
             // Determine new status based on current enabled state
@@ -138,7 +140,7 @@ const Registrations = () => {
             row.email?.toLowerCase().includes(searchTerm.toLowerCase());
         
         const matchesRole = roleFilter === 'All' || row.role === roleFilter;
-        const matchesStatus = statusFilter === 'All' || row.status === statusFilter;
+        const matchesStatus = statusFilter === 'All' || row.status.toLowerCase() === statusFilter.toLowerCase();
         
         return matchesSearch && matchesRole && matchesStatus;
     });
