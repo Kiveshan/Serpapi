@@ -1,11 +1,41 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import styles from './css/NavBar.module.css';
 import { Layers } from 'lucide-react';
 import { authAPI } from '../api/auth/auth';
 
 const NavBar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Check if we're on the landing page
+  const isLandingPage = location.pathname === '/';
+
+  // Fetch user data if not on landing page
+  useEffect(() => {
+    if (!isLandingPage) {
+      const fetchUserData = async () => {
+        try {
+          const token = authAPI.getToken();
+          if (token) {
+            const userData = await authAPI.getProfile(token);
+            setUser(userData);
+          }
+        } catch (err) {
+          // If token is invalid, clear it
+          authAPI.removeToken();
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchUserData();
+    } else {
+      setLoading(false);
+    }
+  }, [isLandingPage]);
 
   const handleLogout = () => {
     // Remove token from localStorage
@@ -13,6 +43,12 @@ const NavBar = () => {
     
     // Navigate to landing page
     navigate('/');
+  };
+
+  // Get user initial from full name
+  const getUserInitial = (fullName) => {
+    if (!fullName) return 'U';
+    return fullName.charAt(0).toUpperCase();
   };
 
   return (
@@ -25,15 +61,18 @@ const NavBar = () => {
           <div className={styles.brand}>RESMA Publications</div>
         </div>
         
-        <div className={styles.rightSection}>
-          <span className={styles.userName}>Admin</span>
-          <div className={styles.userAvatar}>
-            <span className={styles.userInitial}>A</span>
+        {/* Only show user info if not on landing page and user is logged in */}
+        {!isLandingPage && !loading && user && (
+          <div className={styles.rightSection}>
+            <span className={styles.userName}>{user.fullname || 'User'}</span>
+            <div className={styles.userAvatar}>
+              <span className={styles.userInitial}>{getUserInitial(user.fullname)}</span>
+            </div>
+            <button className={styles.logoutButton} onClick={handleLogout}>
+              <span>Logout</span>
+            </button>
           </div>
-          <button className={styles.logoutButton} onClick={handleLogout}>
-            <span>Logout</span>
-          </button>
-        </div>
+        )}
       </div>
     </header>
   );
