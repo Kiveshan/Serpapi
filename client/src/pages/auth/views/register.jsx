@@ -55,25 +55,34 @@ const Register = () => {
     setError('');
     setSuccess('');
 
-    try {
-      const userData = {
-        fullname: fullName,
-        institutionemail: institutionEmail,
-        password: password,
-        roleid: roleId,
-        certificatelink: certificateFile ? certificateFile.name : null
-      };
+    // Validate certificate file is required
+    if (!certificateFile) {
+      setError('Certificate file is required for registration');
+      setLoading(false);
+      return;
+    }
 
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      
+      // Add form fields
+      formData.append('fullname', fullName);
+      formData.append('institutionemail', institutionEmail);
+      formData.append('password', password);
+      formData.append('roleid', roleId);
+      
       // Set institution based on selection
       if (institutionId === 'other') {
-        userData.otherinstitution = otherInstitution;
-        userData.institutionid = null;
+        formData.append('otherinstitution', otherInstitution);
       } else {
-        userData.institutionid = institutionId;
-        userData.otherinstitution = null;
+        formData.append('institutionid', institutionId);
       }
+      
+      // Add certificate file
+      formData.append('certificate', certificateFile);
 
-      const response = await registerAPI.register(userData);
+      const response = await registerAPI.register(formData);
 
       setSuccess('Registration successful!');
 
@@ -209,12 +218,12 @@ const Register = () => {
                   </div>
 
                   <div>
-                    <label className={styles.label}>Certificate</label>
+                    <label className={styles.label}>Certificate *</label>
                     <input
                       className={styles.hiddenFileInput}
                       id="certificate"
                       type="file"
-                      accept="application/pdf"
+                      accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                       onChange={(e) => {
                         const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
                         setCertificateFile(file);
@@ -225,7 +234,7 @@ const Register = () => {
                       <Upload size={16} className={styles.uploadIcon} />
                       <div className={styles.uploadText}>
                         <div className={styles.uploadTitle}>Click to upload or drag and drop</div>
-                        <div className={styles.uploadHint}>PDF (max. 100MB)</div>
+                        <div className={styles.uploadHint}>PDF or Word document (max. 100MB)</div>
                         {certificateFile ? <div className={styles.fileName}>{certificateFile.name}</div> : null}
                       </div>
                     </label>

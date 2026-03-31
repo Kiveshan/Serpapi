@@ -170,6 +170,29 @@ const updateUserStatus = async (userid, enabled, status) => {
   }
 };
 
+// Update user certificate link only
+const updateUserCertificate = async (userid, certificatelink) => {
+  try {
+    const query = `
+      UPDATE user_table 
+      SET certificatelink = $1
+      WHERE userid = $2
+      RETURNING userid, fullname, institutionemail, roleid, certificatelink, enabled, status, dateentered
+    `;
+    
+    const values = [certificatelink, userid];
+    const result = await pool.query(query, values);
+    
+    if (result.rows.length === 0) {
+      throw new Error('User not found');
+    }
+    
+    return result.rows[0];
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Delete user
 const deleteUser = async (userid) => {
   try {
@@ -215,6 +238,7 @@ module.exports = {
   getAllUsers,
   updateUser,
   updateUserStatus,
+  updateUserCertificate,
   deleteUser,
   getAllRoles,
   getAllInstitutions

@@ -8,14 +8,17 @@ const {
   getAllUsers, 
   getAllRoles, 
   getAllInstitutions,
-  updateUserStatus 
+  updateUserStatus,
+  updateUser,
+  updateUserCertificate
 } = require('../../model/auth/auth.model');
 const { generateToken } = require('../../middleware/auth');
+const { uploadFileToS3, deleteFileFromS3 } = require('../../config/s3.config');
 
 // User registration
 const registerController = async (req, res) => {
   try {
-    const { fullname, institutionid, institutionemail, password, roleid, certificatelink } = req.body;
+    const { fullname, institutionid, institutionemail, password, roleid } = req.body;
     
     // Validate required fields
     if (!fullname || !institutionemail || !password) {
@@ -24,15 +27,46 @@ const registerController = async (req, res) => {
       });
     }
     
-    // Create user
+    // Check if certificate file was uploaded
+    if (!req.certificateFile) {
+      return res.status(400).json({ 
+        error: 'Certificate file is required for registration' 
+      });
+    }
+    
+    // Create user with S3 file location
     const newUser = await createUser({
       fullname,
       institutionid: institutionid || null,
       institutionemail,
       password,
       roleid: roleid || null,
-      certificatelink: certificatelink || null
+      certificatelink: req.certificateFile.s3Location
     });
+    
+    // Re-upload certificate with correct user ID
+    try {
+      // Create a temporary file object for re-upload
+      const tempFile = {
+        buffer: req.file.buffer,
+        originalname: req.certificateFile.originalName,
+        mimetype: req.certificateFile.mimeType
+      };
+      
+      const newUploadResult = await uploadFileToS3(tempFile, newUser.userid);
+      
+      // Delete old file
+      await deleteFileFromS3(req.certificateFile.s3Key);
+      
+      // Update user record with new S3 location
+      const updatedUser = await updateUserCertificate(newUser.userid, newUploadResult.location);
+      
+      // Use updated user for response
+      newUser.certificatelink = newUploadResult.location;
+    } catch (uploadError) {
+      console.error('Failed to re-upload certificate with user ID:', uploadError);
+      // Continue with registration even if re-upload fails
+    }
     
     // Generate token
     const token = generateToken(newUser);

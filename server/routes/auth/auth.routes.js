@@ -16,9 +16,10 @@ const {
   requireAnyAdmin, 
   requireAuthentication 
 } = require('../../middleware/auth');
+const { uploadCertificate } = require('../../middleware/upload.middleware');
 
 // Public routes (no authentication required)
-router.post('/register', registerController);
+router.post('/register', uploadCertificate, registerController);
 router.post('/login', loginController);
 router.get('/institutions', getAllInstitutionsController);
 router.get('/roles', getAllRolesController);
