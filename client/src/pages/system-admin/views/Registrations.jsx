@@ -116,9 +116,14 @@ const Registrations = () => {
             const currentApp = allApplications.find(app => app.userid === id);
             if (!currentApp) return;
 
-            // Determine new status based on current enabled state
-            const newStatus = currentApp.enabled ? 'rejected' : 'approved';
             const newEnabled = !currentApp.enabled;
+            let newStatus = currentApp.status;
+
+            // Special case: If status is rejected and we're enabling, change to approved
+            if (currentApp.status === 'rejected' && newEnabled) {
+                newStatus = 'approved';
+            }
+            // For all other cases, keep the current status
 
             // Update via API
             await applicationsAPI.updateApplicationStatus(id, newStatus, newEnabled);

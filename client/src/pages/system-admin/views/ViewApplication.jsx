@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, Download, FileText, X, XCircle } from 'lucide-react';
 import NavBar from '../../../components/NavBar';
@@ -6,29 +6,51 @@ import Footer from '../../../components/Footer';
 import Button from '../../../components/Button';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 import styles from '../css/ViewApplication.module.css';
+import { authAPI } from '../../../api/auth/auth';
+import { applicationsAPI } from '../../../api/systemadmin/applications';
 
 const ViewApplication = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  const user = useMemo(
-    () => ({
-      id,
-      fullName: 'John Doe',
-      email: 'johndoe@email.com',
-      role: 'Research Admin',
-      institution: 'XYZ University',
-      submittedAt: 'Oct 24, 2023 at 10:30 AM',
-      documentName: 'John Doe_ID_Verification.pdf',
-      documentMeta: '1.2 MB • PDF Document',
-    }),
-    [id]
-  );
-
-  const [status, setStatus] = useState('pending');
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
   const [toastVariant, setToastVariant] = useState('success');
   const [toastTitle, setToastTitle] = useState('');
+
+  // Check authentication and fetch user data
+  useEffect(() => {
+    const checkAuthAndFetchUser = async () => {
+      try {
+        const token = authAPI.getToken();
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        const currentUser = await authAPI.getProfile(token);
+        
+        // Check if user is System Admin (roleid = 1)
+        if (currentUser.roleid !== 1) {
+          navigate('/search');
+          return;
+        }
+
+        // Fetch user application details
+        const userData = await applicationsAPI.getApplicationById(id);
+        setUser(userData);
+        setLoading(false);
+      } catch (err) {
+        setError('Failed to load user details. Please try again.');
+        setLoading(false);
+      }
+    };
+
+    checkAuthAndFetchUser();
+  }, [id, navigate]);
 
   const showToast = ({ title, variant }) => {
     setToastTitle(title);
@@ -36,25 +58,103 @@ const ViewApplication = () => {
     setToastOpen(true);
   };
 
-  const handleApprove = () => {
-    setStatus('approved');
-    showToast({
-      title: 'Approved',
-      variant: 'success',
+  const handleApprove = async () => {
+    try {
+      setActionLoading(true);
+      await applicationsAPI.updateApplicationStatus(id, 'approved', true);
+      
+      // Update local state
+      setUser(prev => ({ ...prev, status: 'approved', enabled: true }));
+      
+      showToast({
+        title: 'Application Approved',
+        variant: 'success',
+      });
+    } catch (err) {
+      showToast({
+        title: 'Failed to Approve',
+        variant: 'error',
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    try {
+      setActionLoading(true);
+      await applicationsAPI.updateApplicationStatus(id, 'rejected', false);
+      
+      // Update local state
+      setUser(prev => ({ ...prev, status: 'rejected', enabled: false }));
+      
+      showToast({
+        title: 'Application Rejected',
+        variant: 'error',
+      });
+    } catch (err) {
+      showToast({
+        title: 'Failed to Reject',
+        variant: 'error',
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const isPending = user?.status === 'pending';
+  const isApproved = user?.status === 'approved';
+  const isRejected = user?.status === 'rejected';
+
+  // Format date
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Unknown date';
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
     });
   };
 
-  const handleReject = () => {
-    setStatus('rejected');
-    showToast({
-      title: 'Rejected',
-      variant: 'error',
-    });
-  };
+  // Show loading state
+  if (loading) {
+    return (
+      <div className={styles.page}>
+        <NavBar />
+        <main className={styles.main}>
+          <div className={styles.container}>
+            <div className={styles.loadingCard}>
+              <div className={styles.loadingText}>Loading user details...</div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
-  const isPending = status === 'pending';
-  const isApproved = status === 'approved';
-  const isRejected = status === 'rejected';
+  // Show error state
+  if (error) {
+    return (
+      <div className={styles.page}>
+        <NavBar />
+        <main className={styles.main}>
+          <div className={styles.container}>
+            <div className={styles.errorCard}>
+              <div className={styles.errorText}>{error}</div>
+              <Button className={styles.retryButton} onClick={() => window.location.reload()}>
+                Retry
+              </Button>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>
@@ -71,9 +171,11 @@ const ViewApplication = () => {
           <div className={styles.headerRow}>
             <div>
               <h1 className={styles.title}>User Details</h1>
-              <div className={styles.subtitle}>Submitted on {user.submittedAt}</div>
+              <div className={styles.subtitle}>Submitted on {formatDate(user.dateentered)}</div>
             </div>
             {isPending && <div className={styles.pendingPill}>Pending</div>}
+            {isApproved && <div className={styles.approvedPill}>Approved</div>}
+            {isRejected && <div className={styles.rejectedPill}>Rejected</div>}
           </div>
 
           <div className={`${styles.grid} ${!isPending ? styles.gridSingle : ''}`}>
@@ -83,22 +185,40 @@ const ViewApplication = () => {
                 <div className={styles.cardBody}>
                   <div className={styles.infoRow}>
                     <div className={styles.infoLabel}>Full Name</div>
-                    <div className={styles.infoValue}>{user.fullName}</div>
+                    <div className={styles.infoValue}>{user.fullname}</div>
                   </div>
                   <div className={styles.divider} />
                   <div className={styles.infoRow}>
                     <div className={styles.infoLabel}>Email Address</div>
-                    <div className={styles.infoValue}>{user.email}</div>
+                    <div className={styles.infoValue}>{user.institutionemail}</div>
                   </div>
                   <div className={styles.divider} />
                   <div className={styles.infoRow}>
                     <div className={styles.infoLabel}>Role</div>
-                    <div className={styles.infoValue}>{user.role}</div>
+                    <div className={styles.infoValue}>{user.rolename}</div>
                   </div>
                   <div className={styles.divider} />
                   <div className={styles.infoRow}>
                     <div className={styles.infoLabel}>Institution</div>
-                    <div className={styles.infoValue}>{user.institution}</div>
+                    <div className={styles.infoValue}>{user.institution || user.otherinstitution || 'Not specified'}</div>
+                  </div>
+                  <div className={styles.divider} />
+                  <div className={styles.infoRow}>
+                    <div className={styles.infoLabel}>Account Status</div>
+                    <div className={styles.infoValue}>
+                      <span className={`${styles.statusBadge} ${styles[user.status]}`}>
+                        {user.status}
+                      </span>
+                    </div>
+                  </div>
+                  <div className={styles.divider} />
+                  <div className={styles.infoRow}>
+                    <div className={styles.infoLabel}>Account Enabled</div>
+                    <div className={styles.infoValue}>
+                      <span className={`${styles.enabledBadge} ${styles[user.enabled ? 'enabled' : 'disabled']}`}>
+                        {user.enabled ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </section>
@@ -111,10 +231,10 @@ const ViewApplication = () => {
                       <FileText size={18} />
                     </div>
                     <div className={styles.documentMeta}>
-                      <div className={styles.documentName}>{user.documentName}</div>
-                      <div className={styles.documentSub}>{user.documentMeta}</div>
+                      <div className={styles.documentName}>ID Verification Document</div>
+                      <div className={styles.documentSub}>Document upload functionality coming soon</div>
                     </div>
-                    <Button className={styles.downloadButton} onClick={() => { }}>
+                    <Button className={styles.downloadButton} disabled>
                       <Download size={16} />
                       <span>Download</span>
                     </Button>
@@ -128,13 +248,21 @@ const ViewApplication = () => {
                 <section className={styles.decisionCard}>
                   <div className={styles.decisionTitle}>Admin Decision</div>
                   <div className={styles.decisionActions}>
-                    <Button className={styles.approveButton} onClick={handleApprove}>
+                    <Button 
+                      className={styles.approveButton} 
+                      onClick={handleApprove}
+                      disabled={actionLoading}
+                    >
                       <CheckCircle2 size={16} />
-                      <span>Approve</span>
+                      <span>{actionLoading ? 'Approving...' : 'Approve'}</span>
                     </Button>
-                    <Button className={styles.rejectButton} onClick={handleReject}>
+                    <Button 
+                      className={styles.rejectButton} 
+                      onClick={handleReject}
+                      disabled={actionLoading}
+                    >
                       <XCircle size={16} />
-                      <span>Reject</span>
+                      <span>{actionLoading ? 'Rejecting...' : 'Reject'}</span>
                     </Button>
                   </div>
                 </section>
