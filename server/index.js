@@ -2,8 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
-const publicationsRoutes = require('./routes/publications/publications.routes');
-const authRoutes = require('./routes/auth/auth.routes');
+const routes = require('./routes/index');
 const { testConnection } = require('./db/db');
 
 const app = express();
@@ -14,8 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 // API Routes
-app.use('/api', publicationsRoutes);
-app.use('/api/auth', authRoutes);
+app.use('/api', routes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

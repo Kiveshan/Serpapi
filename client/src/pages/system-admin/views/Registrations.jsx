@@ -8,6 +8,7 @@ import Table from '../../../components/Table';
 import Pagination from '../../../components/Pagination';
 import styles from '../css/Registrations.module.css';
 import { authAPI } from '../../../api/auth/auth';
+import { applicationsAPI } from '../../../api/systemadmin/applications';
 
 const Registrations = () => {
     const navigate = useNavigate();
@@ -17,6 +18,9 @@ const Registrations = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [dataLoading, setDataLoading] = useState(false);
+    const [applications, setApplications] = useState([]);
+    const [pendingCount, setPendingCount] = useState(0);
 
     // Check authentication and System Admin role
     useEffect(() => {
@@ -36,6 +40,8 @@ const Registrations = () => {
                     return;
                 }
 
+                // Fetch applications data
+                await fetchApplicationsData();
                 setLoading(false);
             } catch (err) {
                 setError('Failed to authenticate. Please login again.');
@@ -48,21 +54,35 @@ const Registrations = () => {
         checkAuth();
     }, [navigate]);
 
-    // Sample data
-    const pendingCount = 5;
+    // Fetch applications data
+    const fetchApplicationsData = async () => {
+        try {
+            setDataLoading(true);
+            const data = await applicationsAPI.getAllApplications();
+            setApplications(data.applications);
+            setPendingCount(data.pendingCount);
+        } catch (err) {
+            setError('Failed to load applications. Please refresh the page.');
+        } finally {
+            setDataLoading(false);
+        }
+    };
 
     const tableHeaders = ['Full Name', 'Role', 'Status', 'Action'];
 
-    const [tableData, setTableData] = useState([
-        { id: 1, fullName: 'Sarah Jones', email: 'sarah.jones@example.com', role: 'Research Admin', status: 'Approved', enabled: true },
-        { id: 2, fullName: 'James Allen', email: 'james.allen@example.com', role: 'Research Admin', status: 'Approved', enabled: false },
-        { id: 3, fullName: 'Brandon Smith', email: 'brandon.smith@example.com', role: 'Research Admin', status: 'Approved', enabled: true },
-        { id: 4, fullName: 'William King', email: 'william.king@example.com', role: 'Research Admin', status: 'Rejected', enabled: false },
-        { id: 5, fullName: 'Emily Chen', email: 'emily.chen@example.com', role: 'Research Admin', status: 'Pending', enabled: false },
-        { id: 6, fullName: 'Michael Brown', email: 'michael.brown@example.com', role: 'Research Admin', status: 'Pending', enabled: false },
-    ]);
+    // Transform data for table
+    const tableData = applications.map((app) => ({
+        id: app.userid,
+        fullName: app.fullname,
+        email: app.institutionemail,
+        role: app.rolename,
+        status: app.status,
+        enabled: app.enabled
+    }));
 
-    const roleOptions = ['All', 'Research Admin'];
+    // Get unique roles for filter options
+    const uniqueRoles = [...new Set(applications.map(app => app.rolename))];
+    const roleOptions = ['All', ...uniqueRoles];
     const statusOptions = ['All', 'Pending', 'Approved', 'Rejected'];
 
     const handleSearch = (term) => {
@@ -88,8 +108,24 @@ const Registrations = () => {
         navigate(`/system-admin/registrations/${id}`);
     };
 
-    const handleToggleEnabled = (id) => {
-        setTableData((prev) => prev.map((row) => (row.id === id ? { ...row, enabled: !row.enabled } : row)));
+    const handleToggleEnabled = async (id) => {
+        try {
+            // Find the current application
+            const currentApp = applications.find(app => app.userid === id);
+            if (!currentApp) return;
+
+            // Determine new status based on current enabled state
+            const newStatus = currentApp.enabled ? 'rejected' : 'approved';
+            const newEnabled = !currentApp.enabled;
+
+            // Update via API
+            await applicationsAPI.updateApplicationStatus(id, newStatus, newEnabled);
+
+            // Refresh data
+            await fetchApplicationsData();
+        } catch (err) {
+            setError('Failed to update application status. Please try again.');
+        }
     };
 
     // Pagination logic
