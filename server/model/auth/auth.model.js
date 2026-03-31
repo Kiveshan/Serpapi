@@ -18,7 +18,7 @@ const createUser = async (userData) => {
     
     const query = `
       INSERT INTO user_table (fullname, institutionid, institutionemail, password, roleid, certificatelink, otherinstitution, enabled, status, dateentered)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, true, 'pending', CURRENT_DATE)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, false, 'pending', CURRENT_DATE)
       RETURNING userid, fullname, institutionemail, roleid, certificatelink, otherinstitution, enabled, status, dateentered
     `;
     

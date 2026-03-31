@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NavBar from '../../../components/NavBar';
 import Footer from '../../../components/Footer';
@@ -7,6 +7,7 @@ import FilterDropdown from '../../../components/FilterDropdown';
 import Table from '../../../components/Table';
 import Pagination from '../../../components/Pagination';
 import styles from '../css/Registrations.module.css';
+import { authAPI } from '../../../api/auth/auth';
 
 const Registrations = () => {
     const navigate = useNavigate();
@@ -14,6 +15,38 @@ const Registrations = () => {
     const [roleFilter, setRoleFilter] = useState('All');
     const [statusFilter, setStatusFilter] = useState('All');
     const [currentPage, setCurrentPage] = useState(1);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    // Check authentication and System Admin role
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const token = authAPI.getToken();
+                if (!token) {
+                    navigate('/login');
+                    return;
+                }
+
+                const user = await authAPI.getProfile(token);
+                
+                // Check if user is System Admin (roleid = 1)
+                if (user.roleid !== 1) {
+                    navigate('/search');
+                    return;
+                }
+
+                setLoading(false);
+            } catch (err) {
+                setError('Failed to authenticate. Please login again.');
+                setTimeout(() => {
+                    navigate('/login');
+                }, 2000);
+            }
+        };
+
+        checkAuth();
+    }, [navigate]);
 
     // Sample data
     const pendingCount = 5;
@@ -77,6 +110,40 @@ const Registrations = () => {
     const totalPages = Math.ceil(filteredData.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+
+    // Show loading state
+    if (loading) {
+        return (
+            <div className={styles.page}>
+                <NavBar />
+                <main className={styles.main}>
+                    <div className={styles.wrapper}>
+                        <div className={styles.loadingCard}>
+                            <div className={styles.loadingText}>Authenticating...</div>
+                        </div>
+                    </div>
+                </main>
+                <Footer />
+            </div>
+        );
+    }
+
+    // Show error state
+    if (error) {
+        return (
+            <div className={styles.page}>
+                <NavBar />
+                <main className={styles.main}>
+                    <div className={styles.wrapper}>
+                        <div className={styles.errorCard}>
+                            <div className={styles.errorText}>{error}</div>
+                        </div>
+                    </div>
+                </main>
+                <Footer />
+            </div>
+        );
+    }
 
     return (
         <div className={styles.page}>

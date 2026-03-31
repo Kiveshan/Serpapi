@@ -43,6 +43,20 @@
   color: #111827;
 }
 
+.errorMessage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  color: #DC2626;
+  font-size: 12px;
+  margin-bottom: 16px;
+  justify-content: center;
+}
+
 .form {
   margin-top: 18px;
   text-align: left;
