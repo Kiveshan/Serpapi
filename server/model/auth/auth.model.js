@@ -53,15 +53,27 @@ const loginUser = async (institutionemail, password) => {
     
     const user = result.rows[0];
     
-    // Check if user is enabled
-    if (!user.enabled) {
-      throw new Error('Account is disabled');
-    }
-    
     const isValidPassword = await verifyPassword(password, user.password);
     
     if (!isValidPassword) {
       throw new Error('Invalid credentials');
+    }
+    
+    // Check authentication rules based on user role
+    if (user.roleid === 1) {
+      // System Admin - only needs to be enabled
+      if (!user.enabled) {
+        throw new Error('Account is disabled');
+      }
+    } else {
+      // Normal User - must be both approved AND enabled
+      if (!user.enabled) {
+        throw new Error('Account is disabled');
+      }
+      
+      if (user.status !== 'approved') {
+        throw new Error('Account is not approved. Please wait for admin approval.');
+      }
     }
     
     // Remove password from user object before returning

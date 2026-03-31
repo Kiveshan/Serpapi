@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ChevronLeft, ChevronRight, Download, Filter, Link as LinkIcon, Search, X } from 'lucide-react';
 import styles from '../css/SearchPublications.module.css';
+import NavBar from '../../../components/NavBar';
+import Footer from '../../../components/Footer';
+import { authAPI } from '../../../api/auth/auth';
 
 const API_BASE_URL = 'http://localhost:5001';
 
@@ -81,11 +84,36 @@ const SearchPublications = () => {
   const [serverResults, setServerResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [user, setUser] = useState(null);
 
   const [yearFrom, setYearFrom] = useState('');
   const [yearTo, setYearTo] = useState('');
   const [type, setType] = useState('all');
   const [page, setPage] = useState(1);
+
+  // Check authentication and fetch user data
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = authAPI.getToken();
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        const userData = await authAPI.getProfile(token);
+        setUser(userData);
+        setAuthLoading(false);
+      } catch (err) {
+        // If token is invalid, clear it and redirect to login
+        authAPI.removeToken();
+        navigate('/login');
+      }
+    };
+
+    checkAuth();
+  }, [navigate]);
 
   const fetchPublications = async (q) => {
     const trimmed = String(q || '').trim();
@@ -164,25 +192,17 @@ const SearchPublications = () => {
     setPage(safe);
   };
 
+  if (authLoading) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.loading}>Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.headerInner}>
-          <div className={styles.headerLeft}>
-            <button type="button" className={styles.headerButton} onClick={() => navigate(-1)}>
-              Back
-            </button>
-          </div>
-
-          <div className={styles.headerCenter}>Publications</div>
-
-          <div className={styles.headerRight}>
-            <button type="button" className={`${styles.headerButton} ${styles.logoutButton}`} onClick={() => navigate('/login')}>
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
+      <NavBar />
 
       <div className={styles.content}>
         <aside className={styles.sidebar}>
@@ -338,9 +358,7 @@ const SearchPublications = () => {
         </main>
       </div>
 
-      <footer className={styles.footer}>
-        <div className={styles.footerInner}>&copy; 2026 Publications</div>
-      </footer>
+      <Footer />
     </div>
   );
 };
