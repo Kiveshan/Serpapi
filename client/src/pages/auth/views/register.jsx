@@ -75,7 +75,7 @@ const Register = () => {
 
       const response = await registerAPI.register(userData);
 
-      setSuccess('Registration successful! Please check your email for further instructions.');
+      setSuccess('Registration successful!');
 
       // Redirect to login after 2 seconds
       setTimeout(() => {
