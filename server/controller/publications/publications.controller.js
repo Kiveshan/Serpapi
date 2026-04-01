@@ -69,9 +69,6 @@ const buildSearchQuery = (cleanedQuery, searchTypes, extractedYear = null) => {
     if (searchTypes.isInitials) {
       // For initials, keep the original format but ensure it's valid
       optimizedQuery = cleanedQuery;
-    } else if (searchTypes.isSurname) {
-      // For surname, add "author:" prefix if available
-      optimizedQuery = `author:${cleanedQuery}`;
     }
   } else {
     // Mixed search - keep as is but optimize
@@ -178,16 +175,18 @@ const searchPublicationsController = async (req, res) => {
     // Parse and analyze the search query
     const { cleanedQuery, searchTypes, extractedYear } = parseSearchQuery(query);
     const optimizedQuery = buildSearchQuery(cleanedQuery, searchTypes, extractedYear);
+    const apiQuery = optimizedQuery.toLowerCase();
     
     console.log(`Original query: "${query}"`);
     console.log(`Optimized query: "${optimizedQuery}"`);
+    console.log(`API query: "${apiQuery}"`);
     console.log(`Search types:`, Object.keys(searchTypes).filter(key => searchTypes[key]));
     if (extractedYear) {
       console.log(`Extracted year: ${extractedYear}`);
     }
     
     // Get publications from model
-    let publications = await searchPublications(optimizedQuery);
+    let publications = await searchPublications(apiQuery);
     
     // Apply intelligent filtering and ranking based on search types
     publications = filterAndRankResults(publications, searchTypes, query, extractedYear);
@@ -238,13 +237,14 @@ const advancedSearchController = async (req, res) => {
     // Parse and analyze the search query
     const { cleanedQuery, searchTypes, extractedYear } = parseSearchQuery(searchQuery);
     const optimizedQuery = buildSearchQuery(cleanedQuery, searchTypes, extractedYear);
+    const apiQuery = optimizedQuery.toLowerCase();
     
     if (extractedYear) {
       console.log(`Extracted year: ${extractedYear}`);
     }
     
     // Get publications from model
-    let publications = await searchPublications(optimizedQuery);
+    let publications = await searchPublications(apiQuery);
     
     // Apply filtering and ranking
     publications = filterAndRankResults(publications, searchTypes, searchQuery, extractedYear);
