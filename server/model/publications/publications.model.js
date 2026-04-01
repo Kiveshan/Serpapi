@@ -11,41 +11,74 @@ const extractCitations = (text) => {
   return match ? parseInt(match[1].replace(/,/g, '')) : 0;
 };
 
-// Search publications using SerpApi Google Scholar
+// Search publications using SerpApi Google Scholar with pagination
 const searchWithSerpApi = async (query) => {
-  const scholarApiUrl = `https://serpapi.com/search.json?engine=google_scholar&q=${encodeURIComponent(query)}&api_key=633a1be5a47bd119f41d60ff0674c0fe89195bee82ecc3b8a7da12cd541710ad`;
+  const apiKey = '633a1be5a47bd119f41d60ff0674c0fe89195bee82ecc3b8a7da12cd541710ad';
+  const maxResultsPerRequest = 20; // SerpApi maximum per request
+  let allResults = [];
+  let start = 0;
+  let hasMoreResults = true;
   
-  const response = await axios.get(scholarApiUrl, { timeout: 15000 });
+  console.log('Starting pagination to fetch all results...');
   
-  if (response.data && response.data.organic_results) {
-    return response.data.organic_results.map((result, index) => {
-      const authors = result.publication_info?.authors ? 
-        result.publication_info.authors.map(author => author.name || author).filter(Boolean) : [];
+  while (hasMoreResults) {
+    const scholarApiUrl = `https://serpapi.com/search.json?engine=google_scholar&q=${encodeURIComponent(query)}&api_key=${apiKey}&start=${start}&num=${maxResultsPerRequest}`;
+    
+    try {
+      const response = await axios.get(scholarApiUrl, { timeout: 15000 });
       
-      let year = '';
-      const yearMatch = (result.snippet || '').match(/\b(19|20)\d{2}\b/);
-      if (yearMatch) {
-        year = yearMatch[0];
-      } else if (result.publication_info?.year) {
-        year = result.publication_info.year.toString();
+      if (response.data && response.data.organic_results) {
+        const pageResults = response.data.organic_results.map((result, index) => {
+          const authors = result.publication_info?.authors ? 
+            result.publication_info.authors.map(author => author.name || author).filter(Boolean) : [];
+          
+          let year = '';
+          const yearMatch = (result.snippet || '').match(/\b(19|20)\d{2}\b/);
+          if (yearMatch) {
+            year = yearMatch[0];
+          } else if (result.publication_info?.year) {
+            year = result.publication_info.year.toString();
+          }
+          
+          return {
+            id: `serp_${start + index}`,
+            title: result.title || '',
+            authors: authors,
+            year: year,
+            venue: result.publication_info?.name || '',
+            abstract: result.snippet || '',
+            url: result.link || '',
+            pdfUrl: result.inline_links?.pdf?.link || '',
+            citations: result.inline_links?.cited_by?.total || 0,
+            snippets: result.snippet ? [result.snippet] : []
+          };
+        });
+        
+        allResults = allResults.concat(pageResults);
+        console.log(`Fetched ${pageResults.length} results (total: ${allResults.length})`);
+        
+        // Check if there are more results
+        // If we got fewer results than requested, we've reached the end
+        if (pageResults.length < maxResultsPerRequest) {
+          hasMoreResults = false;
+          console.log('Reached end of results');
+        } else {
+          start += maxResultsPerRequest;
+          // Add a small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } else {
+        hasMoreResults = false;
+        console.log('No organic_results found in response');
       }
-      
-      return {
-        id: `serp_${index}`,
-        title: result.title || '',
-        authors: authors,
-        year: year,
-        venue: result.publication_info?.name || '',
-        abstract: result.snippet || '',
-        url: result.link || '',
-        pdfUrl: result.inline_links?.pdf?.link || '',
-        citations: result.inline_links?.cited_by?.total || 0,
-        snippets: result.snippet ? [result.snippet] : []
-      };
-    });
+    } catch (error) {
+      console.error(`Error fetching page at start=${start}:`, error.message);
+      hasMoreResults = false;
+    }
   }
   
-  return [];
+  console.log(`Total results fetched: ${allResults.length}`);
+  return allResults;
 };
 
 // Search publications using Semantic Scholar API

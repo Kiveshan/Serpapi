@@ -164,9 +164,8 @@ const filterAndRankResults = (publications, searchTypes, originalQuery, extracte
     return { ...pub, relevanceScore: score };
   });
 
-  // Sort by relevance score and filter out low-scoring results
+  // Sort by relevance score but keep all results (no filtering)
   return scoredResults
-    .filter(result => result.relevanceScore > 10)
     .sort((a, b) => b.relevanceScore - a.relevanceScore)
     .map(({ relevanceScore, ...result }) => result);
 };
@@ -194,8 +193,8 @@ const searchPublicationsController = async (req, res) => {
     publications = filterAndRankResults(publications, searchTypes, query, extractedYear);
     console.log(`After filtering/ranking: ${publications.length} relevant publications`);
     
-    // Add delay before sending response
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Add delay before sending response (increased for pagination)
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     res.json(publications);
     
