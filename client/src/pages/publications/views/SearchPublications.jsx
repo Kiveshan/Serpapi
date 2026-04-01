@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Download, Filter, Link as LinkIcon, Search, 
 import styles from '../css/SearchPublications.module.css';
 import NavBar from '../../../components/NavBar';
 import Footer from '../../../components/Footer';
+import Pagination from '../../../components/Pagination';
 import { authAPI } from '../../../api/auth/auth';
 
 const API_BASE_URL = 'http://localhost:5001';
@@ -325,35 +326,11 @@ const SearchPublications = () => {
           </div>
 
           {filtered.length > 0 ? (
-            <div className={styles.pagination}>
-              <button type="button" className={styles.pageButton} onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
-                <ChevronLeft size={14} />
-              </button>
-
-              {Array.from({ length: pageCount }).slice(0, 11).map((_, idx) => {
-                const p = idx + 1;
-                const isActive = p === currentPage;
-                return (
-                  <button
-                    key={p}
-                    type="button"
-                    className={`${styles.pageButton} ${isActive ? styles.pageButtonActive : ''}`}
-                    onClick={() => goToPage(p)}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
-
-              <button
-                type="button"
-                className={styles.pageButton}
-                onClick={() => goToPage(currentPage + 1)}
-                disabled={currentPage === pageCount}
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={pageCount}
+              onPageChange={goToPage}
+            />
           ) : null}
         </main>
       </div>
