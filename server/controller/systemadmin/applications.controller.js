@@ -5,6 +5,7 @@ const {
   updateApplicationStatus,
   getApplicationById
 } = require('../../model/systemadmin/applications.model');
+const { getSignedDownloadUrl } = require('../../config/s3.config');
 
 // Get all applications with pending count
 const getAllApplicationsController = async (req, res) => {
@@ -171,10 +172,63 @@ const getApplicationsByStatusController = async (req, res) => {
   }
 };
 
+// Get signed URL for document download
+const getDocumentUrlController = async (req, res) => {
+  try {
+    const { userid } = req.params;
+    
+    if (!userid) {
+      return res.status(400).json({
+        success: false,
+        error: 'User ID is required'
+      });
+    }
+
+    // Get user details to find certificate link
+    const application = await getApplicationById(userid);
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        error: 'Application not found'
+      });
+    }
+
+    if (!application.certificatelink) {
+      return res.status(404).json({
+        success: false,
+        error: 'No certificate document found for this user'
+      });
+    }
+
+    // Extract S3 key from the certificate link
+    const url = new URL(application.certificatelink);
+    const s3Key = url.pathname.substring(1); // Remove leading slash
+
+    // Generate signed URL with 1 hour expiration
+    const signedUrl = await getSignedDownloadUrl(s3Key, 3600);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        signedUrl,
+        fileName: application.certificatelink.split('/').pop() || 'document'
+      }
+    });
+  } catch (error) {
+    console.error('Error in getDocumentUrlController:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate document URL'
+    });
+  }
+};
+
 module.exports = {
   getAllApplicationsController,
   getPendingApplicationsController,
   getApplicationByIdController,
   updateApplicationStatusController,
-  getApplicationsByStatusController
+  getApplicationsByStatusController,
+  getDocumentUrlController
 };

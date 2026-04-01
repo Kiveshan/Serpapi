@@ -17,9 +17,11 @@ if (!bucketName) {
 // Upload file to S3
 const uploadFileToS3 = async (file, userId) => {
   try {
-    // Generate unique filename
-    const fileExtension = file.originalname.split('.').pop();
-    const fileName = `publications/registrations/${userId}/${Date.now()}.${fileExtension}`;
+    // Clean the original filename to remove special characters
+    const cleanOriginalName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+    
+    // Generate unique filename with original name
+    const fileName = `publications/registrations/${userId}/${cleanOriginalName}`;
     
     // Set up S3 upload parameters
     const params = {

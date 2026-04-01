@@ -5,7 +5,8 @@ const {
   getPendingApplicationsController,
   getApplicationByIdController,
   updateApplicationStatusController,
-  getApplicationsByStatusController
+  getApplicationsByStatusController,
+  getDocumentUrlController
 } = require('../../controller/systemadmin/applications.controller');
 const { 
   authenticateToken, 
@@ -27,6 +28,9 @@ router.get('/status/:status', getApplicationsByStatusController);
 
 // Get application details by ID
 router.get('/:userid', getApplicationByIdController);
+
+// Get signed URL for document download
+router.get('/:userid/document', getDocumentUrlController);
 
 // Update application status
 router.put('/:userid/status', updateApplicationStatusController);

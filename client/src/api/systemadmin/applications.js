@@ -72,5 +72,17 @@ export const applicationsAPI = {
     } catch (error) {
       throw error.response?.data || error.message;
     }
+  },
+
+  // Get signed URL for document download
+  getDocumentUrl: async (userid) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/system-admin/${userid}/document`, {
+        headers: getAuthHeaders()
+      });
+      return response.data.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
   }
 };

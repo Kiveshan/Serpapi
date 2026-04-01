@@ -106,6 +106,28 @@ const ViewApplication = () => {
   const isApproved = user?.status === 'approved';
   const isRejected = user?.status === 'rejected';
 
+  // Extract filename from certificate link
+  const getFileNameFromUrl = (url) => {
+    if (!url) return 'Document';
+    const parts = url.split('/');
+    const fileName = parts[parts.length - 1];
+    return fileName || 'Document';
+  };
+
+  // Handle document download
+  const handleDownloadDocument = async () => {
+    if (user?.certificatelink) {
+      try {
+        const { signedUrl } = await applicationsAPI.getDocumentUrl(user.userid);
+        window.open(signedUrl, '_blank');
+      } catch (error) {
+        console.error('Failed to get document URL:', error);
+        // Fallback to direct link if signed URL fails
+        window.open(user.certificatelink, '_blank');
+      }
+    }
+  };
+
   // Format date
   const formatDate = (dateString) => {
     if (!dateString) return 'Unknown date';
@@ -226,19 +248,38 @@ const ViewApplication = () => {
               <section className={styles.card}>
                 <div className={styles.cardHeader}>Uploaded Document</div>
                 <div className={styles.cardBody}>
-                  <div className={styles.documentRow}>
-                    <div className={styles.documentIcon}>
-                      <FileText size={18} />
+                  {user?.certificatelink ? (
+                    <div className={styles.documentRow}>
+                      <div className={styles.documentIcon}>
+                        <FileText size={18} />
+                      </div>
+                      <div className={styles.documentMeta}>
+                        <div className={styles.documentName}>Certification Document</div>
+                        <div className={styles.documentSub}>{getFileNameFromUrl(user.certificatelink)}</div>
+                      </div>
+                      <Button 
+                        className={styles.downloadButton} 
+                        onClick={handleDownloadDocument}
+                      >
+                        <Download size={16} />
+                        <span>View</span>
+                      </Button>
                     </div>
-                    <div className={styles.documentMeta}>
-                      <div className={styles.documentName}>ID Verification Document</div>
-                      <div className={styles.documentSub}>Document upload functionality coming soon</div>
+                  ) : (
+                    <div className={styles.documentRow}>
+                      <div className={styles.documentIcon}>
+                        <FileText size={18} />
+                      </div>
+                      <div className={styles.documentMeta}>
+                        <div className={styles.documentName}>No Document Uploaded</div>
+                        <div className={styles.documentSub}>User has not uploaded any certificate</div>
+                      </div>
+                      <Button className={styles.downloadButton} disabled>
+                        <Download size={16} />
+                        <span>No Document</span>
+                      </Button>
                     </div>
-                    <Button className={styles.downloadButton} disabled>
-                      <Download size={16} />
-                      <span>Download</span>
-                    </Button>
-                  </div>
+                  )}
                 </div>
               </section>
             </div>
