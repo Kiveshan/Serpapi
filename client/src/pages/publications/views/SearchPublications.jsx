@@ -280,7 +280,7 @@ const SearchPublications = () => {
               type="button"
               className={styles.secondaryButton}
               onClick={() => exportToCsv(filtered)}
-              disabled={filtered.length === 0}
+              disabled={filtered.length === 0 || isLoading}
             >
               <Download size={16} /> Export to CSV
             </button>
