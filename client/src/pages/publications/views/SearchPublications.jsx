@@ -47,38 +47,84 @@ const getYearNumber = (year) => {
 };
 
 const exportToCsv = (rows) => {
-  const header = ['Title', 'Authors', 'Year', 'Venue', 'URL', 'PDF URL', 'Citations'];
+  if (!rows || rows.length === 0) {
+    return;
+  }
+
+  const header = [
+    'Title',
+    'Authors',
+    'Year',
+    'Publication Type',
+    'Venue/Journal',
+    'Citations',
+    'URL',
+    'PDF Link'
+  ];
+
   const escape = (value) => {
-    const s = String(value ?? '');
-    const needsQuotes = /[\n\r",]/.test(s);
+    const s = String(value ?? '').trim();
+    if (!s) return '';
+    const needsQuotes = /[\n\r",;]/.test(s);
     const escaped = s.replace(/"/g, '""');
-    return needsQuotes ? `"${escaped}"` : escaped;
+    const formatted = escaped
+      .replace(/\t/g, ' ')
+      .replace(/\r?\n/g, ' ');
+    return needsQuotes ? `"${formatted}"` : formatted;
   };
 
-  const lines = [header.map(escape).join(',')];
-  rows.forEach((r) => {
-    lines.push(
-      [
-        r.title,
-        Array.isArray(r.authors) ? r.authors.join(', ') : '',
-        r.year,
-        r.venue,
-        r.url,
-        r.pdfUrl || '',
-        r.citations,
-      ]
-        .map(escape)
-        .join(',')
-    );
+  const formatAuthors = (authors) => {
+    if (!authors || !Array.isArray(authors) || authors.length === 0) {
+      return '';
+    }
+    return authors
+      .filter(author => author && typeof author === 'string')
+      .map(author => author.trim())
+      .filter(author => author.length > 0)
+      .join('; ');
+  };
+
+  const formatUrl = (url) => {
+    if (!url || typeof url !== 'string') return '';
+    return url.trim();
+  };
+
+  const lines = [];
+  lines.push('\uFEFF');
+  lines.push(header.map(escape).join(','));
+  rows.forEach((row, index) => {
+    try {
+      const rowData = [
+        escape(row.title || ''),
+        escape(formatAuthors(row.authors)),
+        escape(row.year || ''),
+        escape(TYPE_LABEL_BY_VALUE[row.publicationType] || 'Other'),
+        escape(row.venue || ''),
+        escape(row.citations || 0),
+        escape(formatUrl(row.url)),
+        escape(formatUrl(row.pdfUrl))
+      ];
+      lines.push(rowData.join(','));
+    } catch (error) {
+      console.error(`Error formatting row ${index}:`, error);
+      lines.push(`"Error formatting row ${index}",,,,,,,`);
+    }
   });
 
-  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const csvContent = lines.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'publications.csv';
-  a.click();
+  const link = document.createElement('a');
+  const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+  const filename = `publications_${timestamp}.csv`;
+  link.href = url;
+  link.download = filename;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
   URL.revokeObjectURL(url);
+  console.log(`Exported ${rows.length} publications to ${filename}`);
 };
 
 const SearchPublications = () => {
