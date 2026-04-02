@@ -16,9 +16,11 @@ const TYPE_OPTIONS = [
   { value: 'conference', label: 'Conference Paper' },
   { value: 'book', label: 'Book' },
   { value: 'thesis', label: 'Thesis' },
+  { value: 'preprint', label: 'Preprint' },
+  { value: 'report', label: 'Technical Report' },
 ];
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 3;
 
 const TYPE_LABEL_BY_VALUE = {
   all: 'Other',
@@ -26,6 +28,8 @@ const TYPE_LABEL_BY_VALUE = {
   conference: 'Conference Paper',
   book: 'Book',
   thesis: 'Thesis',
+  preprint: 'Preprint',
+  report: 'Technical Report',
 };
 
 const normalizeType = (venue = '') => {
@@ -158,8 +162,7 @@ const SearchPublications = () => {
       const matchesYearFrom = yf != null ? (y != null ? y >= yf : false) : true;
       const matchesYearTo = yt != null ? (y != null ? y <= yt : false) : true;
 
-      const inferredType = normalizeType(pub.venue || '');
-      const matchesType = type === 'all' ? true : inferredType === type;
+      const matchesType = type === 'all' ? true : (pub.publicationType || 'all') === type;
 
       return matchesQuery && matchesYearFrom && matchesYearTo && matchesType;
     });
@@ -313,7 +316,7 @@ const SearchPublications = () => {
               <div className={styles.item} key={pub.id}>
                 <h3 className={styles.itemTitle}>
                   {pub.title}
-                  <span className={styles.badge}>{TYPE_LABEL_BY_VALUE[normalizeType(pub.venue || '')] || 'Other'}</span>
+                  <span className={styles.badge}>{TYPE_LABEL_BY_VALUE[pub.publicationType || 'all'] || 'Other'}</span>
                 </h3>
 
                 <div className={styles.meta}>

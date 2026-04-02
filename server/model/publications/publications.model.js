@@ -11,6 +11,99 @@ const extractCitations = (text) => {
   return match ? parseInt(match[1].replace(/,/g, '')) : 0;
 };
 
+// Helper function to extract year from various sources
+const extractYear = (result) => {
+  // Try publication_info.year first (most reliable)
+  if (result.publication_info?.year) {
+    return result.publication_info.year.toString();
+  }
+  
+  // Try to extract from snippet
+  const snippetYearMatch = (result.snippet || '').match(/\b(19|20)\d{2}\b/);
+  if (snippetYearMatch) {
+    return snippetYearMatch[0];
+  }
+  
+  // Try to extract from publication_info.summary
+  if (result.publication_info?.summary) {
+    const summaryYearMatch = result.publication_info.summary.match(/\b(19|20)\d{2}\b/);
+    if (summaryYearMatch) {
+      return summaryYearMatch[0];
+    }
+  }
+  
+  return '';
+};
+
+// Helper function to extract publication type from venue and other sources
+const extractPublicationType = (result) => {
+  const venue = (result.publication_info?.name || '').toLowerCase();
+  const summary = (result.publication_info?.summary || '').toLowerCase();
+  const snippet = (result.snippet || '').toLowerCase();
+  
+  // Combine all text sources for type detection
+  const allText = `${venue} ${summary} ${snippet}`;
+  
+  // Check for journal indicators (expanded patterns)
+  if (allText.includes('journal') || allText.includes('j.') || 
+      allText.includes('vol.') || allText.includes('volume') ||
+      allText.includes('issue') || allText.includes('iss.') ||
+      allText.includes('pp.') || allText.includes('pages') ||
+      allText.includes('article') || allText.includes('paper') ||
+      allText.includes('review') || allText.includes('editorial')) {
+    return 'journal';
+  }
+  
+  // Check for conference indicators (expanded patterns)
+  if (allText.includes('conference') || allText.includes('proceedings') ||
+      allText.includes('proc.') || allText.includes('workshop') ||
+      allText.includes('symposium') || allText.includes('int.') ||
+      allText.includes('international') || allText.includes('meeting') ||
+      allText.includes('conf.') || allText.includes('icml') ||
+      allText.includes('neurips') || allText.includes('iccv') ||
+      allText.includes('cvpr') || allText.includes('eccv')) {
+    return 'conference';
+  }
+  
+  // Check for thesis indicators (expanded patterns)
+  if (allText.includes('thesis') || allText.includes('dissertation') ||
+      allText.includes('phd') || allText.includes('master') ||
+      allText.includes('university') || allText.includes('dept.') ||
+      allText.includes('department') || allText.includes('graduate') ||
+      allText.includes('doctoral') || allText.includes('masters')) {
+    return 'thesis';
+  }
+  
+  // Check for book indicators (expanded patterns)
+  if (allText.includes('book') || allText.includes('edition') ||
+      allText.includes('publisher') || allText.includes('press') ||
+      allText.includes('isbn') || allText.includes('chapter') ||
+      allText.includes('editor') || allText.includes('cambridge') ||
+      allText.includes('oxford') || allText.includes('springer') ||
+      allText.includes('wiley') || allText.includes('elsevier')) {
+    return 'book';
+  }
+  
+  // Check for preprint/arxiv indicators
+  if (allText.includes('arxiv') || allText.includes('preprint') ||
+      allText.includes('biorxiv') || allText.includes('medrxiv')) {
+    return 'preprint';
+  }
+  
+  // Check for technical report
+  if (allText.includes('technical report') || allText.includes('tech report') ||
+      allText.includes('tr-') || allText.includes('memo')) {
+    return 'report';
+  }
+  
+  // Log for debugging purposes
+  if (allText.length > 0) {
+    console.log(`Type detection - Venue: "${venue}", Summary: "${summary.substring(0, 100)}...", Snippet: "${snippet.substring(0, 100)}..."`);
+  }
+  
+  return 'all';
+};
+
 // Search publications using SerpApi Google Scholar with pagination
 const searchWithSerpApi = async (query) => {
   const apiKey = '633a1be5a47bd119f41d60ff0674c0fe89195bee82ecc3b8a7da12cd541710ad';
@@ -32,13 +125,8 @@ const searchWithSerpApi = async (query) => {
           const authors = result.publication_info?.authors ? 
             result.publication_info.authors.map(author => author.name || author).filter(Boolean) : [];
           
-          let year = '';
-          const yearMatch = (result.snippet || '').match(/\b(19|20)\d{2}\b/);
-          if (yearMatch) {
-            year = yearMatch[0];
-          } else if (result.publication_info?.year) {
-            year = result.publication_info.year.toString();
-          }
+          const year = extractYear(result);
+          const publicationType = extractPublicationType(result);
           
           return {
             id: `serp_${start + index}`,
@@ -46,6 +134,7 @@ const searchWithSerpApi = async (query) => {
             authors: authors,
             year: year,
             venue: result.publication_info?.name || '',
+            publicationType: publicationType,
             abstract: result.snippet || '',
             url: result.link || '',
             pdfUrl: result.inline_links?.pdf?.link || '',
