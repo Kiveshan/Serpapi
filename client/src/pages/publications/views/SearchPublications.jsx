@@ -279,16 +279,19 @@ const SearchPublications = () => {
             </button>
           </form>
 
-          <div className={styles.searchField}>
-            <Search size={16} className={styles.searchIcon} />
-            <input
-              className={styles.searchInput}
-              value={filterText}
-              onChange={(e) => setFilterText(e.target.value)}
-              placeholder={serverQuery ? 'Filter within results...' : 'Filter within results...'}
-              disabled={serverResults.length === 0}
-            />
-          </div>
+          {serverResults.length > 0 && (
+            <div className={styles.filterWithinResults}>
+              <div className={styles.searchField}>
+                <Search size={16} className={styles.searchIcon} />
+                <input
+                  className={styles.searchInput}
+                  value={filterText}
+                  onChange={(e) => setFilterText(e.target.value)}
+                  placeholder={serverQuery ? 'Filter within results...' : 'Filter within results...'}
+                />
+              </div>
+            </div>
+          )}
 
           {isLoading && <div className={styles.loading}>Loading...</div>}
           {error && <div className={styles.error}>{error}</div>}
