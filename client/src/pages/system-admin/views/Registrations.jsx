@@ -72,15 +72,31 @@ const Registrations = () => {
 
     const tableHeaders = ['Full Name', 'Role', 'Status', 'Action'];
 
-    // Transform data for table
-    const tableData = allApplications.map((app) => ({
-        id: app.userid,
-        fullName: app.fullname,
-        email: app.institutionemail,
-        role: app.rolename,
-        status: app.status,
-        enabled: app.enabled
-    }));
+    // Transform data for table with sorting
+    const tableData = allApplications
+        .map((app) => ({
+            id: app.userid,
+            fullName: app.fullname,
+            email: app.institutionemail,
+            role: app.rolename,
+            status: app.status,
+            enabled: app.enabled,
+            dateentered: app.dateentered // Include date for sorting
+        }))
+        .sort((a, b) => {
+            // First sort by status: pending first, then approved, then rejected
+            const statusOrder = { 'pending': 0, 'approved': 1, 'rejected': 2 };
+            const statusComparison = statusOrder[a.status.toLowerCase()] - statusOrder[b.status.toLowerCase()];
+            
+            if (statusComparison !== 0) {
+                return statusComparison;
+            }
+            
+            // Then sort by date (latest first)
+            const dateA = new Date(a.dateentered || 0);
+            const dateB = new Date(b.dateentered || 0);
+            return dateB - dateA;
+        });
 
     // Get unique roles for filter options
     const uniqueRoles = [...new Set(allApplications.map(app => app.rolename))];

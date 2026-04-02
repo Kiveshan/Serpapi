@@ -22,10 +22,14 @@ const NavBar = () => {
           if (token) {
             const userData = await authAPI.getProfile(token);
             setUser(userData);
+          } else {
+            // No token found, ensure user state is null
+            setUser(null);
           }
         } catch (err) {
-          // If token is invalid, clear it
+          // If token is invalid, clear it and reset user state
           authAPI.removeToken();
+          setUser(null);
         } finally {
           setLoading(false);
         }
@@ -34,12 +38,14 @@ const NavBar = () => {
       fetchUserData();
     } else {
       setLoading(false);
+      setUser(null);
     }
   }, [isLandingPage]);
 
   const handleLogout = () => {
-    // Remove token from localStorage
+    // Remove token from localStorage and reset user state
     authAPI.removeToken();
+    setUser(null);
     
     // Navigate to landing page
     navigate('/');
