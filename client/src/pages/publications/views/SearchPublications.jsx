@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ChevronLeft, ChevronRight, Download, Filter, Link as LinkIcon, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Filter, Link as LinkIcon, Loader2, Search, X } from 'lucide-react';
 import styles from '../css/SearchPublications.module.css';
 import NavBar from '../../../components/NavBar';
 import Footer from '../../../components/Footer';
@@ -265,8 +265,15 @@ const SearchPublications = () => {
               />
             </div>
 
-            <button type="submit" className={styles.primaryButton} disabled={isLoading}>
-              Search
+            <button type="submit" className={styles.primaryButton} disabled={isLoading || !searchQuery.trim()}>
+              {isLoading ? (
+                <>
+                  <Loader2 size={16} className={styles.spinner} />
+                  Searching...
+                </>
+              ) : (
+                'Search'
+              )}
             </button>
 
             <button
@@ -293,7 +300,12 @@ const SearchPublications = () => {
             </div>
           )}
 
-          {isLoading && <div className={styles.loading}>Loading...</div>}
+          {isLoading && (
+            <div className={styles.loadingContainer}>
+              <Loader2 size={24} className={styles.loadingSpinner} />
+              <span>Searching publications...</span>
+            </div>
+          )}
           {error && <div className={styles.error}>{error}</div>}
 
           <div className={styles.list}>
