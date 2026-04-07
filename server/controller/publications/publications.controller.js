@@ -1,4 +1,4 @@
-const { searchPublications, cleanText } = require('../../model/publications/publications.model');
+const { searchPublications, cleanText } = require('../../service/publications/publications.service');
 
 // Advanced search query parser
 const parseSearchQuery = (query) => {

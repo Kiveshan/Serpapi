@@ -28,13 +28,8 @@ app.listen(PORT, async () => {
   
   const dbConnected = await testConnection();
   if (dbConnected) {
-    console.log('\n✅ SerpApi is configured and active!');
-    console.log('🔄 Will fallback to Semantic Scholar if SerpApi fails');
-    console.log('🔄 Will fallback to web scraping if both APIs fail');
-    console.log('🎯 Results are automatically filtered and ranked by relevance');
-    console.log('📅 Year-based filtering now supported!');
-    console.log('🗄️ Database connection established');
+    console.log('Database connection established');
   } else {
-    console.log('\n⚠️ Database connection failed, but server continues running...');
+    console.log('\n Database connection failed, but server continues running...');
   }
 });

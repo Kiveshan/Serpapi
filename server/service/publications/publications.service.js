@@ -1,4 +1,5 @@
 const axios = require('axios');
+require('dotenv').config();
 
 // Helper function to clean text
 const cleanText = (text) => {
@@ -106,8 +107,8 @@ const extractPublicationType = (result) => {
 
 // Search publications using SerpApi Google Scholar with pagination
 const searchWithSerpApi = async (query) => {
-  const apiKey = '633a1be5a47bd119f41d60ff0674c0fe89195bee82ecc3b8a7da12cd541710ad';
-  const maxResultsPerRequest = 20; // SerpApi maximum per request
+  const apiKey = process.env.API_KEY;
+  const maxResultsPerRequest = 20;
   let allResults = [];
   let start = 0;
   let hasMoreResults = true;
@@ -147,13 +148,13 @@ const searchWithSerpApi = async (query) => {
         console.log(`Fetched ${pageResults.length} results (total: ${allResults.length})`);
         
         // Check if there are more results
-        // If we got fewer results than requested, we've reached the end
+        // If fewer results than requested, we've reached the end
         if (pageResults.length < maxResultsPerRequest) {
           hasMoreResults = false;
           console.log('Reached end of results');
         } else {
           start += maxResultsPerRequest;
-          // Add a small delay to avoid rate limiting
+          // A small delay to avoid rate limiting
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       } else {
