@@ -48,6 +48,32 @@
   color: #6B7280;
 }
 
+.errorMessage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 8px;
+  color: #DC2626;
+  font-size: 12px;
+  margin-top: 16px;
+}
+
+.successMessage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 8px;
+  color: #16A34A;
+  font-size: 12px;
+  margin-top: 16px;
+}
+
 .form {
   margin-top: 18px;
 }
@@ -154,6 +180,50 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.header {
+  background-color: #BFE3F2;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.leftSection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rightSection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background-color: #0669F4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand {
+  font-weight: 700;
+  color: #0669F4;
+  font-size: 16px;
 }
 
 @media (max-width: 640px) {

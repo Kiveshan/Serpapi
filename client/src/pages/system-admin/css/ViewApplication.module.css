@@ -63,6 +63,26 @@
   font-weight: 600;
 }
 
+.approvedPill {
+  margin-top: 18px;
+  background-color: #E6F6EC;
+  color: #17A948FF;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rejectedPill {
+  margin-top: 18px;
+  background-color: #FCECEA;
+  color: #E25256FF;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .grid {
   display: grid;
   grid-template-columns: 1fr 260px;

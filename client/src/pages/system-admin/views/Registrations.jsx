@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NavBar from '../../../components/NavBar';
 import Footer from '../../../components/Footer';
@@ -7,6 +7,8 @@ import FilterDropdown from '../../../components/FilterDropdown';
 import Table from '../../../components/Table';
 import Pagination from '../../../components/Pagination';
 import styles from '../css/Registrations.module.css';
+import { authAPI } from '../../../api/auth/auth';
+import { applicationsAPI } from '../../../api/systemadmin/applications';
 
 const Registrations = () => {
     const navigate = useNavigate();
@@ -14,22 +16,91 @@ const Registrations = () => {
     const [roleFilter, setRoleFilter] = useState('All');
     const [statusFilter, setStatusFilter] = useState('All');
     const [currentPage, setCurrentPage] = useState(1);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [dataLoading, setDataLoading] = useState(false);
+    const [applications, setApplications] = useState([]);
+    const [pendingCount, setPendingCount] = useState(0);
+    const [allApplications, setAllApplications] = useState([]); // Store all data for client-side filtering
 
-    // Sample data
-    const pendingCount = 5;
+    // Check authentication and System Admin role
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const token = authAPI.getToken();
+                if (!token) {
+                    navigate('/login');
+                    return;
+                }
+
+                const user = await authAPI.getProfile(token);
+                
+                // Check if user is System Admin (roleid = 1)
+                if (user.roleid !== 1) {
+                    navigate('/search');
+                    return;
+                }
+
+                // Fetch applications data
+                await fetchApplicationsData();
+                setLoading(false);
+            } catch (err) {
+                setError('Failed to authenticate. Please login again.');
+                setTimeout(() => {
+                    navigate('/login');
+                }, 2000);
+            }
+        };
+
+        checkAuth();
+    }, [navigate]);
+
+    // Fetch applications data
+    const fetchApplicationsData = async () => {
+        try {
+            setDataLoading(true);
+            const data = await applicationsAPI.getAllApplications();
+            setApplications(data.applications);
+            setAllApplications(data.applications); // Store all data for client-side filtering
+            setPendingCount(data.pendingCount);
+        } catch (err) {
+            setError('Failed to load applications. Please refresh the page.');
+        } finally {
+            setDataLoading(false);
+        }
+    };
 
     const tableHeaders = ['Full Name', 'Role', 'Status', 'Action'];
 
-    const [tableData, setTableData] = useState([
-        { id: 1, fullName: 'Sarah Jones', email: 'sarah.jones@example.com', role: 'Research Admin', status: 'Approved', enabled: true },
-        { id: 2, fullName: 'James Allen', email: 'james.allen@example.com', role: 'Research Admin', status: 'Approved', enabled: false },
-        { id: 3, fullName: 'Brandon Smith', email: 'brandon.smith@example.com', role: 'Research Admin', status: 'Approved', enabled: true },
-        { id: 4, fullName: 'William King', email: 'william.king@example.com', role: 'Research Admin', status: 'Rejected', enabled: false },
-        { id: 5, fullName: 'Emily Chen', email: 'emily.chen@example.com', role: 'Research Admin', status: 'Pending', enabled: false },
-        { id: 6, fullName: 'Michael Brown', email: 'michael.brown@example.com', role: 'Research Admin', status: 'Pending', enabled: false },
-    ]);
+    // Transform data for table with sorting
+    const tableData = allApplications
+        .map((app) => ({
+            id: app.userid,
+            fullName: app.fullname,
+            email: app.institutionemail,
+            role: app.rolename,
+            status: app.status,
+            enabled: app.enabled,
+            dateentered: app.dateentered // Include date for sorting
+        }))
+        .sort((a, b) => {
+            // First sort by status: pending first, then approved, then rejected
+            const statusOrder = { 'pending': 0, 'approved': 1, 'rejected': 2 };
+            const statusComparison = statusOrder[a.status.toLowerCase()] - statusOrder[b.status.toLowerCase()];
+            
+            if (statusComparison !== 0) {
+                return statusComparison;
+            }
+            
+            // Then sort by date (latest first)
+            const dateA = new Date(a.dateentered || 0);
+            const dateB = new Date(b.dateentered || 0);
+            return dateB - dateA;
+        });
 
-    const roleOptions = ['All', 'Research Admin'];
+    // Get unique roles for filter options
+    const uniqueRoles = [...new Set(allApplications.map(app => app.rolename))];
+    const roleOptions = ['All', ...uniqueRoles];
     const statusOptions = ['All', 'Pending', 'Approved', 'Rejected'];
 
     const handleSearch = (term) => {
@@ -55,8 +126,29 @@ const Registrations = () => {
         navigate(`/system-admin/registrations/${id}`);
     };
 
-    const handleToggleEnabled = (id) => {
-        setTableData((prev) => prev.map((row) => (row.id === id ? { ...row, enabled: !row.enabled } : row)));
+    const handleToggleEnabled = async (id) => {
+        try {
+            // Find the current application from allApplications
+            const currentApp = allApplications.find(app => app.userid === id);
+            if (!currentApp) return;
+
+            const newEnabled = !currentApp.enabled;
+            let newStatus = currentApp.status;
+
+            // Special case: If status is rejected and we're enabling, change to approved
+            if (currentApp.status === 'rejected' && newEnabled) {
+                newStatus = 'approved';
+            }
+            // For all other cases, keep the current status
+
+            // Update via API
+            await applicationsAPI.updateApplicationStatus(id, newStatus, newEnabled);
+
+            // Refresh data
+            await fetchApplicationsData();
+        } catch (err) {
+            setError('Failed to update application status. Please try again.');
+        }
     };
 
     // Pagination logic
@@ -69,7 +161,7 @@ const Registrations = () => {
             row.email?.toLowerCase().includes(searchTerm.toLowerCase());
         
         const matchesRole = roleFilter === 'All' || row.role === roleFilter;
-        const matchesStatus = statusFilter === 'All' || row.status === statusFilter;
+        const matchesStatus = statusFilter === 'All' || row.status.toLowerCase() === statusFilter.toLowerCase();
         
         return matchesSearch && matchesRole && matchesStatus;
     });
@@ -77,6 +169,40 @@ const Registrations = () => {
     const totalPages = Math.ceil(filteredData.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+
+    // Show loading state
+    if (loading) {
+        return (
+            <div className={styles.page}>
+                <NavBar />
+                <main className={styles.main}>
+                    <div className={styles.wrapper}>
+                        <div className={styles.loadingCard}>
+                            <div className={styles.loadingText}>Authenticating...</div>
+                        </div>
+                    </div>
+                </main>
+                <Footer />
+            </div>
+        );
+    }
+
+    // Show error state
+    if (error) {
+        return (
+            <div className={styles.page}>
+                <NavBar />
+                <main className={styles.main}>
+                    <div className={styles.wrapper}>
+                        <div className={styles.errorCard}>
+                            <div className={styles.errorText}>{error}</div>
+                        </div>
+                    </div>
+                </main>
+                <Footer />
+            </div>
+        );
+    }
 
     return (
         <div className={styles.page}>

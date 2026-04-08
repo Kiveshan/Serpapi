@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
-import NavBar from '../../../components/NavBar';
+import { ArrowRight, Layers } from 'lucide-react';
 import Footer from '../../../components/Footer';
 import styles from '../css/landingPage.module.css';
 
@@ -10,7 +9,16 @@ const LandingPage = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar />
+      <header className={styles.header}>
+        <div className={styles.container}>
+          <div className={styles.leftSection}>
+            <div className={styles.logo}>
+              <Layers size={16} color="#ffffff" />
+            </div>
+            <div className={styles.brand}>RESMA Publications</div>
+          </div>
+        </div>
+      </header>
 
       <main className={styles.main}>
         <div className={styles.hero}>
@@ -19,7 +27,7 @@ const LandingPage = () => {
           </div>
 
           <h1 className={styles.title}>
-            Refine Your
+            Capture Your
             <br />
             <span className={styles.titleAccent}>Publications</span>
           </h1>

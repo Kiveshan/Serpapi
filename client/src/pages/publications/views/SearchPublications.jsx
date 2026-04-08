@@ -1,8 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ChevronLeft, ChevronRight, Download, Filter, Link as LinkIcon, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Filter, Link as LinkIcon, Loader2, Search, X } from 'lucide-react';
 import styles from '../css/SearchPublications.module.css';
+import NavBar from '../../../components/NavBar';
+import Footer from '../../../components/Footer';
+import Pagination from '../../../components/Pagination';
+import { authAPI } from '../../../api/auth/auth';
 
 const API_BASE_URL = 'http://localhost:5001';
 
@@ -12,9 +16,11 @@ const TYPE_OPTIONS = [
   { value: 'conference', label: 'Conference Paper' },
   { value: 'book', label: 'Book' },
   { value: 'thesis', label: 'Thesis' },
+  { value: 'preprint', label: 'Preprint' },
+  { value: 'report', label: 'Technical Report' },
 ];
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 3;
 
 const TYPE_LABEL_BY_VALUE = {
   all: 'Other',
@@ -22,6 +28,8 @@ const TYPE_LABEL_BY_VALUE = {
   conference: 'Conference Paper',
   book: 'Book',
   thesis: 'Thesis',
+  preprint: 'Preprint',
+  report: 'Technical Report',
 };
 
 const normalizeType = (venue = '') => {
@@ -39,38 +47,84 @@ const getYearNumber = (year) => {
 };
 
 const exportToCsv = (rows) => {
-  const header = ['Title', 'Authors', 'Year', 'Venue', 'URL', 'PDF URL', 'Citations'];
+  if (!rows || rows.length === 0) {
+    return;
+  }
+
+  const header = [
+    'Title',
+    'Authors',
+    'Year',
+    'Publication Type',
+    'Venue/Journal',
+    'Citations',
+    'URL',
+    'PDF Link'
+  ];
+
   const escape = (value) => {
-    const s = String(value ?? '');
-    const needsQuotes = /[\n\r",]/.test(s);
+    const s = String(value ?? '').trim();
+    if (!s) return '';
+    const needsQuotes = /[\n\r",;]/.test(s);
     const escaped = s.replace(/"/g, '""');
-    return needsQuotes ? `"${escaped}"` : escaped;
+    const formatted = escaped
+      .replace(/\t/g, ' ')
+      .replace(/\r?\n/g, ' ');
+    return needsQuotes ? `"${formatted}"` : formatted;
   };
 
-  const lines = [header.map(escape).join(',')];
-  rows.forEach((r) => {
-    lines.push(
-      [
-        r.title,
-        Array.isArray(r.authors) ? r.authors.join(', ') : '',
-        r.year,
-        r.venue,
-        r.url,
-        r.pdfUrl || '',
-        r.citations,
-      ]
-        .map(escape)
-        .join(',')
-    );
+  const formatAuthors = (authors) => {
+    if (!authors || !Array.isArray(authors) || authors.length === 0) {
+      return '';
+    }
+    return authors
+      .filter(author => author && typeof author === 'string')
+      .map(author => author.trim())
+      .filter(author => author.length > 0)
+      .join('; ');
+  };
+
+  const formatUrl = (url) => {
+    if (!url || typeof url !== 'string') return '';
+    return url.trim();
+  };
+
+  const lines = [];
+  lines.push('\uFEFF');
+  lines.push(header.map(escape).join(','));
+  rows.forEach((row, index) => {
+    try {
+      const rowData = [
+        escape(row.title || ''),
+        escape(formatAuthors(row.authors)),
+        escape(row.year || ''),
+        escape(TYPE_LABEL_BY_VALUE[row.publicationType] || 'Other'),
+        escape(row.venue || ''),
+        escape(row.citations || 0),
+        escape(formatUrl(row.url)),
+        escape(formatUrl(row.pdfUrl))
+      ];
+      lines.push(rowData.join(','));
+    } catch (error) {
+      console.error(`Error formatting row ${index}:`, error);
+      lines.push(`"Error formatting row ${index}",,,,,,,`);
+    }
   });
 
-  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const csvContent = lines.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'publications.csv';
-  a.click();
+  const link = document.createElement('a');
+  const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+  const filename = `publications_${timestamp}.csv`;
+  link.href = url;
+  link.download = filename;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
   URL.revokeObjectURL(url);
+  console.log(`Exported ${rows.length} publications to ${filename}`);
 };
 
 const SearchPublications = () => {
@@ -81,11 +135,36 @@ const SearchPublications = () => {
   const [serverResults, setServerResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [user, setUser] = useState(null);
 
   const [yearFrom, setYearFrom] = useState('');
   const [yearTo, setYearTo] = useState('');
   const [type, setType] = useState('all');
   const [page, setPage] = useState(1);
+
+  // Check authentication and fetch user data
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = authAPI.getToken();
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        const userData = await authAPI.getProfile(token);
+        setUser(userData);
+        setAuthLoading(false);
+      } catch (err) {
+        // If token is invalid, clear it and redirect to login
+        authAPI.removeToken();
+        navigate('/login');
+      }
+    };
+
+    checkAuth();
+  }, [navigate]);
 
   const fetchPublications = async (q) => {
     const trimmed = String(q || '').trim();
@@ -129,8 +208,7 @@ const SearchPublications = () => {
       const matchesYearFrom = yf != null ? (y != null ? y >= yf : false) : true;
       const matchesYearTo = yt != null ? (y != null ? y <= yt : false) : true;
 
-      const inferredType = normalizeType(pub.venue || '');
-      const matchesType = type === 'all' ? true : inferredType === type;
+      const matchesType = type === 'all' ? true : (pub.publicationType || 'all') === type;
 
       return matchesQuery && matchesYearFrom && matchesYearTo && matchesType;
     });
@@ -164,25 +242,17 @@ const SearchPublications = () => {
     setPage(safe);
   };
 
+  if (authLoading) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.loading}>Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.headerInner}>
-          <div className={styles.headerLeft}>
-            <button type="button" className={styles.headerButton} onClick={() => navigate(-1)}>
-              Back
-            </button>
-          </div>
-
-          <div className={styles.headerCenter}>Publications</div>
-
-          <div className={styles.headerRight}>
-            <button type="button" className={`${styles.headerButton} ${styles.logoutButton}`} onClick={() => navigate('/login')}>
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
+      <NavBar />
 
       <div className={styles.content}>
         <aside className={styles.sidebar}>
@@ -244,32 +314,47 @@ const SearchPublications = () => {
               />
             </div>
 
-            <button type="submit" className={styles.primaryButton} disabled={isLoading}>
-              Search
+            <button type="submit" className={styles.primaryButton} disabled={isLoading || !searchQuery.trim()}>
+              {isLoading ? (
+                <>
+                  <Loader2 size={16} className={styles.spinner} />
+                  Searching...
+                </>
+              ) : (
+                'Search'
+              )}
             </button>
 
             <button
               type="button"
               className={styles.secondaryButton}
               onClick={() => exportToCsv(filtered)}
-              disabled={filtered.length === 0}
+              disabled={filtered.length === 0 || isLoading}
             >
               <Download size={16} /> Export to CSV
             </button>
           </form>
 
-          <div className={styles.searchField}>
-            <Search size={16} className={styles.searchIcon} />
-            <input
-              className={styles.searchInput}
-              value={filterText}
-              onChange={(e) => setFilterText(e.target.value)}
-              placeholder={serverQuery ? 'Filter within results...' : 'Filter within results...'}
-              disabled={serverResults.length === 0}
-            />
-          </div>
+          {serverResults.length > 0 && (
+            <div className={styles.filterWithinResults}>
+              <div className={styles.searchField}>
+                <Search size={16} className={styles.searchIcon} />
+                <input
+                  className={styles.searchInput}
+                  value={filterText}
+                  onChange={(e) => setFilterText(e.target.value)}
+                  placeholder={serverQuery ? 'Filter within results...' : 'Filter within results...'}
+                />
+              </div>
+            </div>
+          )}
 
-          {isLoading && <div className={styles.loading}>Loading...</div>}
+          {isLoading && (
+            <div className={styles.loadingContainer}>
+              <Loader2 size={24} className={styles.loadingSpinner} />
+              <span>Searching publications...</span>
+            </div>
+          )}
           {error && <div className={styles.error}>{error}</div>}
 
           <div className={styles.list}>
@@ -277,7 +362,7 @@ const SearchPublications = () => {
               <div className={styles.item} key={pub.id}>
                 <h3 className={styles.itemTitle}>
                   {pub.title}
-                  <span className={styles.badge}>{TYPE_LABEL_BY_VALUE[normalizeType(pub.venue || '')] || 'Other'}</span>
+                  <span className={styles.badge}>{TYPE_LABEL_BY_VALUE[pub.publicationType || 'all'] || 'Other'}</span>
                 </h3>
 
                 <div className={styles.meta}>
@@ -305,42 +390,16 @@ const SearchPublications = () => {
           </div>
 
           {filtered.length > 0 ? (
-            <div className={styles.pagination}>
-              <button type="button" className={styles.pageButton} onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
-                <ChevronLeft size={14} />
-              </button>
-
-              {Array.from({ length: pageCount }).slice(0, 11).map((_, idx) => {
-                const p = idx + 1;
-                const isActive = p === currentPage;
-                return (
-                  <button
-                    key={p}
-                    type="button"
-                    className={`${styles.pageButton} ${isActive ? styles.pageButtonActive : ''}`}
-                    onClick={() => goToPage(p)}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
-
-              <button
-                type="button"
-                className={styles.pageButton}
-                onClick={() => goToPage(currentPage + 1)}
-                disabled={currentPage === pageCount}
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={pageCount}
+              onPageChange={goToPage}
+            />
           ) : null}
         </main>
       </div>
 
-      <footer className={styles.footer}>
-        <div className={styles.footerInner}>&copy; 2026 Publications</div>
-      </footer>
+      <Footer />
     </div>
   );
 };
