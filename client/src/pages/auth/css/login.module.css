@@ -149,3 +149,47 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+.header {
+  background-color: #BFE3F2;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.leftSection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rightSection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background-color: #0669F4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand {
+  font-weight: 700;
+  color: #0669F4;
+  font-size: 16px;
+}

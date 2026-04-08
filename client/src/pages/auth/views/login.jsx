@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Eye, ArrowRight, AlertCircle } from 'lucide-react';
-import NavBar from '../../../components/NavBar';
+import { Mail, Eye, ArrowRight, AlertCircle, Layers } from 'lucide-react';
 import Footer from '../../../components/Footer';
 import styles from '../css/login.module.css';
 import { authAPI } from '../../../api/auth/auth';
@@ -43,7 +42,16 @@ const Login = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar />
+      <header className={styles.header}>
+        <div className={styles.container}>
+          <div className={styles.leftSection}>
+            <div className={styles.logo}>
+              <Layers size={16} color="#ffffff" />
+            </div>
+            <div className={styles.brand}>RESMA Publications</div>
+          </div>
+        </div>
+      </header>
 
       <main className={styles.main}>
         <div className={styles.wrapper}>

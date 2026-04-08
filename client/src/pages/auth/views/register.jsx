@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
-import NavBar from '../../../components/NavBar';
+import { Upload, ArrowLeft, AlertCircle, CheckCircle, Layers } from 'lucide-react';
 import Footer from '../../../components/Footer';
 import styles from '../css/register.module.css';
 import { registerAPI } from '../../../api/register/register';
@@ -65,24 +64,22 @@ const Register = () => {
     try {
       // Create FormData for file upload
       const formData = new FormData();
-      
+
       // Add form fields
       formData.append('fullname', fullName);
       formData.append('institutionemail', institutionEmail);
       formData.append('password', password);
       formData.append('roleid', roleId);
-      
+
       // Set institution based on selection
       if (institutionId === 'other') {
         formData.append('otherinstitution', otherInstitution);
       } else {
         formData.append('institutionid', institutionId);
       }
-      
+
       // Add certificate file
       formData.append('certificate', certificateFile);
-
-      const response = await registerAPI.register(formData);
 
       setSuccess('Registration successful!');
 
@@ -100,7 +97,16 @@ const Register = () => {
 
   return (
     <div className={styles.page}>
-      <NavBar />
+      <header className={styles.header}>
+        <div className={styles.container}>
+          <div className={styles.leftSection}>
+            <div className={styles.logo}>
+              <Layers size={16} color="#ffffff" />
+            </div>
+            <div className={styles.brand}>RESMA Publications</div>
+          </div>
+        </div>
+      </header>
 
       <main className={styles.main}>
         <div className={styles.wrapper}>
@@ -118,7 +124,7 @@ const Register = () => {
                   {error}
                 </div>
               )}
-              
+
               {success && (
                 <div className={styles.successMessage}>
                   <CheckCircle size={16} />
@@ -142,10 +148,10 @@ const Register = () => {
 
                   <div>
                     <label className={styles.label}>Institution *</label>
-                    <select 
-                      value={institutionId} 
-                      onChange={(e) => setInstitutionId(e.target.value)} 
-                      required 
+                    <select
+                      value={institutionId}
+                      onChange={(e) => setInstitutionId(e.target.value)}
+                      required
                       className={styles.select}
                       disabled={loading}
                     >
@@ -188,10 +194,10 @@ const Register = () => {
 
                   <div>
                     <label className={styles.label}>Role *</label>
-                    <select 
-                      value={roleId} 
-                      onChange={(e) => setRoleId(e.target.value)} 
-                      required 
+                    <select
+                      value={roleId}
+                      onChange={(e) => setRoleId(e.target.value)}
+                      required
                       className={styles.select}
                       disabled={loading}
                     >
@@ -241,8 +247,8 @@ const Register = () => {
                   </div>
                 </div>
 
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className={styles.primaryButton}
                   disabled={loading}
                 >
@@ -250,9 +256,9 @@ const Register = () => {
                 </button>
 
                 <div className={styles.backRow}>
-                  <button 
-                    type="button" 
-                    onClick={() => navigate('/login')} 
+                  <button
+                    type="button"
+                    onClick={() => navigate('/login')}
                     className={styles.backButton}
                     disabled={loading}
                   >
