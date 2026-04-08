@@ -19,6 +19,7 @@ const TYPE_OPTIONS = [
   { value: 'thesis', label: 'Thesis' },
   { value: 'preprint', label: 'Preprint' },
   { value: 'report', label: 'Technical Report' },
+  { value: 'other', label: 'Other' },
 ];
 
 const PAGE_SIZE = 3;
@@ -204,7 +205,7 @@ const SearchPublications = () => {
       const matchesYearFrom = yf != null ? (y != null ? y >= yf : false) : true;
       const matchesYearTo = yt != null ? (y != null ? y <= yt : false) : true;
 
-      const matchesType = type === 'all' ? true : (pub.publicationType || 'all') === type;
+      const matchesType = type === 'all' ? true : (type === 'other' ? (pub.publicationType || 'all') === 'all' : (pub.publicationType || 'all') === type);
 
       return matchesQuery && matchesYearFrom && matchesYearTo && matchesType;
     });
