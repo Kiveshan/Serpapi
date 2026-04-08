@@ -1,5 +1,83 @@
 const { searchPublications, cleanText } = require('../../service/publications/publications.service');
 
+const dedupePublications = (publications) => {
+  const seen = new Set();
+  const deduped = [];
+
+  for (const pub of publications || []) {
+    const urlKey = (pub && pub.url) ? String(pub.url).trim().toLowerCase() : '';
+    const titleKey = (pub && pub.title) ? String(pub.title).trim().toLowerCase() : '';
+    const yearKey = (pub && pub.year) ? String(pub.year).trim() : '';
+    const key = urlKey || `${titleKey}__${yearKey}`;
+
+    if (!key) {
+      deduped.push(pub);
+      continue;
+    }
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(pub);
+  }
+
+  return deduped;
+};
+
+const buildSearchPlan = (rawQuery, cleanedQuery, searchTypes, extractedYear) => {
+  const userHasQuotes = rawQuery.includes('"') || rawQuery.includes("'");
+  const words = cleanedQuery.split(/\s+/).filter(Boolean);
+  const wordCount = words.length;
+  const isProbablyLongTitle = wordCount >= 8;
+  const hasOperators = /\b(author:|intitle:|OR|AND|-)\b/i.test(rawQuery);
+
+  const queries = [];
+  const primaryQuery = cleanedQuery;
+
+  queries.push({ query: primaryQuery, options: extractedYear ? { year: extractedYear } : {} });
+
+  if (searchTypes.isORCID) {
+    return queries;
+  }
+
+  if (!hasOperators && searchTypes.isAuthor && !searchTypes.isPaperTitle) {
+    const authorQuery = `author:"${cleanedQuery}"`;
+    queries.push({ query: authorQuery, options: extractedYear ? { year: extractedYear } : {} });
+  }
+
+  if (!userHasQuotes && searchTypes.isPaperTitle && !searchTypes.isAuthor && !isProbablyLongTitle) {
+    const quotedTitleQuery = `"${cleanedQuery}"`;
+    queries.push({ query: quotedTitleQuery, options: extractedYear ? { year: extractedYear } : {} });
+  }
+
+  if (extractedYear) {
+    queries.push({
+      query: primaryQuery,
+      options: { yearFrom: extractedYear - 1, yearTo: extractedYear + 1 }
+    });
+  }
+
+  return queries;
+};
+
+const searchWithFallback = async ({ rawQuery, cleanedQuery, searchTypes, extractedYear }) => {
+  const plan = buildSearchPlan(rawQuery, cleanedQuery, searchTypes, extractedYear);
+  let merged = [];
+
+  for (let i = 0; i < plan.length; i++) {
+    const { query, options } = plan[i];
+    const results = await searchPublications(query, options);
+    merged = dedupePublications(merged.concat(results));
+
+    if (i === 0 && merged.length >= 30) {
+      break;
+    }
+    if (i === 1 && merged.length >= 30) {
+      break;
+    }
+  }
+
+  return merged;
+};
+
 // Advanced search query parser
 const parseSearchQuery = (query) => {
   const cleanedQuery = cleanText(query);
@@ -9,10 +87,11 @@ const parseSearchQuery = (query) => {
     isInitials: false,
     isSurname: false,
     isFullName: false,
+    isORCID: false,
     hasYear: false
   };
 
-  // Extract year from query
+  // Extract year
   let extractedYear = null;
   const yearMatch = cleanedQuery.match(/\b(19|20)\d{2}\b/);
   if (yearMatch) {
@@ -20,35 +99,44 @@ const parseSearchQuery = (query) => {
     searchTypes.hasYear = true;
   }
 
-  // Remove year from cleaned query for further processing
-  const queryWithoutYear = extractedYear ? cleanedQuery.replace(/\b(19|20)\d{2}\b/, '').trim() : cleanedQuery;
+  const queryWithoutYear = extractedYear
+    ? cleanedQuery.replace(/\b(19|20)\d{2}\b/, '').trim()
+    : cleanedQuery;
 
-  // Check if it's a paper title (contains quotes or title-like patterns)
-  if (queryWithoutYear.includes('"') || queryWithoutYear.includes("'") || 
-      /^(the|a|an|analysis|study|review|survey|investigation|development|design|implementation|approach|method|algorithm|system|framework|model|theory)/i.test(queryWithoutYear)) {
+  // ORCID detection (e.g. 0000-0002-1825-0097)
+  const orcidPattern = /^\d{4}-\d{4}-\d{4}-\d{4}$/;
+  if (orcidPattern.test(queryWithoutYear.replace(/\s/g, ''))) {
+    searchTypes.isORCID = true;
+    searchTypes.isAuthor = true;
+  }
+
+  // Paper title patterns
+  if (queryWithoutYear.includes('"') || queryWithoutYear.includes("'") ||
+    /^(the|a|an|analysis|study|review|survey|investigation|development|design|implementation|approach|method|algorithm|system|framework|model|theory)/i.test(queryWithoutYear)) {
     searchTypes.isPaperTitle = true;
   }
 
-  // Check for initials pattern (e.g., "J K Smith", "A.B. Cooper")
-  if (/^[A-Z]\.?[A-Z]\.?\s+[A-Z][a-z]/i.test(queryWithoutYear) || 
-      /^[A-Z]\s+[A-Z]\s+[A-Z][a-z]/i.test(queryWithoutYear)) {
+  // Author patterns - FIXED for "N Naicker", "J. Smith", etc.
+  if (/^[A-Z]\.?\s+[A-Z][a-z]+(\s+[A-Z][a-z]+)?$/i.test(queryWithoutYear)) {
+    searchTypes.isInitials = true;   // single initial + surname
+    searchTypes.isAuthor = true;
+  }
+  else if (/^[A-Z]\.?[A-Z]\.?\s+[A-Z][a-z]/i.test(queryWithoutYear) ||
+    /^[A-Z]\s+[A-Z]\s+[A-Z][a-z]/i.test(queryWithoutYear)) {
     searchTypes.isInitials = true;
     searchTypes.isAuthor = true;
   }
-  // Check for surname pattern (single word or two words with last name capitalized)
   else if (/^[A-Z][a-z]+(\s+[A-Z][a-z]+)?$/.test(queryWithoutYear) && queryWithoutYear.split(' ').length <= 2) {
     searchTypes.isSurname = true;
     searchTypes.isAuthor = true;
   }
-  // Check for full name pattern (First Last or First M. Last)
   else if (/^[A-Z][a-z]+\s+[A-Z][a-z]+(\s+[A-Z][a-z]+)*$/.test(queryWithoutYear) ||
-           /^[A-Z][a-z]+\s+[A-Z]\.?\s*[A-Z][a-z]+$/.test(queryWithoutYear)) {
+    /^[A-Z][a-z]+\s+[A-Z]\.?\s*[A-Z][a-z]+$/.test(queryWithoutYear)) {
     searchTypes.isFullName = true;
     searchTypes.isAuthor = true;
   }
-  // Default to general search
-  else {
-    searchTypes.isPaperTitle = true;
+  else if (!searchTypes.isPaperTitle) {
+    // Default fallback
     searchTypes.isAuthor = true;
   }
 
@@ -56,29 +144,19 @@ const parseSearchQuery = (query) => {
 };
 
 // Build optimized search query based on search type
-const buildSearchQuery = (cleanedQuery, searchTypes, extractedYear = null) => {
+const buildSearchQuery = (cleanedQuery, searchTypes) => {   // removed extractedYear param
   let optimizedQuery = cleanedQuery;
 
-  if (searchTypes.isPaperTitle && !searchTypes.isAuthor) {
-    // Pure paper title search - add quotes for exact matching
-    if (!cleanedQuery.includes('"')) {
-      optimizedQuery = `"${cleanedQuery}"`;
-    }
-  } else if (searchTypes.isAuthor && !searchTypes.isPaperTitle) {
-    // Pure author search - optimize for author name
-    if (searchTypes.isInitials) {
-      // For initials, keep the original format but ensure it's valid
-      optimizedQuery = cleanedQuery;
-    }
-  } else {
-    // Mixed search - keep as is but optimize
+  if (searchTypes.isORCID) {
+    optimizedQuery = cleanedQuery;                    // just the ORCID number
+  }
+  else if (searchTypes.isPaperTitle && !searchTypes.isAuthor) {
     optimizedQuery = cleanedQuery;
   }
-
-  // Add year filter if present
-  if (extractedYear) {
-    optimizedQuery += ` year:${extractedYear}`;
+  else if (searchTypes.isAuthor && !searchTypes.isPaperTitle) {
+    optimizedQuery = cleanedQuery;
   }
+  // Mixed case → leave as-is (SerpApi handles it well)
 
   return optimizedQuery;
 };
@@ -118,13 +196,13 @@ const filterAndRankResults = (publications, searchTypes, originalQuery, extracte
     if (searchTypes.isAuthor) {
       const authorWords = queryLower.split(' ');
       let authorMatchCount = 0;
-      
+
       authorWords.forEach(word => {
         if (authorsLower.includes(word)) {
           authorMatchCount++;
         }
       });
-      
+
       if (authorMatchCount === authorWords.length) {
         score += 80;
       } else if (authorMatchCount > 0) {
@@ -140,7 +218,7 @@ const filterAndRankResults = (publications, searchTypes, originalQuery, extracte
           }
           return '';
         }).join(' ');
-        
+
         if (authorInitials.toLowerCase().includes(initials.toLowerCase())) {
           score += 60;
         }
@@ -171,42 +249,44 @@ const filterAndRankResults = (publications, searchTypes, originalQuery, extracte
 const searchPublicationsController = async (req, res) => {
   try {
     const { query } = req.params;
-    
+
     // Parse and analyze the search query
     const { cleanedQuery, searchTypes, extractedYear } = parseSearchQuery(query);
-    const optimizedQuery = buildSearchQuery(cleanedQuery, searchTypes, extractedYear);
-    const apiQuery = optimizedQuery.toLowerCase();
-    
-    console.log(`Original query: "${query}"`);
+    const optimizedQuery = buildSearchQuery(cleanedQuery, searchTypes);
+    const searchOptions = extractedYear ? { year: extractedYear } : {};
+
+    console.log(`Original: "${query}" | Optimized: "${optimizedQuery}" | Year filter: ${extractedYear || 'none'}`);
     console.log(`Optimized query: "${optimizedQuery}"`);
-    console.log(`API query: "${apiQuery}"`);
     console.log(`Search types:`, Object.keys(searchTypes).filter(key => searchTypes[key]));
     if (extractedYear) {
       console.log(`Extracted year: ${extractedYear}`);
     }
-    
-    // Get publications from model
-    let publications = await searchPublications(apiQuery);
-    
-    // Apply intelligent filtering and ranking based on search types
+
+    let publications = await searchWithFallback({
+      rawQuery: query,
+      cleanedQuery: optimizedQuery,
+      searchTypes,
+      extractedYear
+    });
+
     publications = filterAndRankResults(publications, searchTypes, query, extractedYear);
     console.log(`After filtering/ranking: ${publications.length} relevant publications`);
-    
+
     // Add delay before sending response (increased for pagination)
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     res.json(publications);
-    
+
   } catch (error) {
     console.error('Error searching publications:', error.message);
-    
+
     if (error.code === 'ECONNABORTED') {
       res.status(408).json({ error: 'Request timeout. Please try again.' });
     } else if (error.response && error.response.status === 429) {
       res.status(429).json({ error: 'Too many requests. Please try again later.' });
     } else {
-      res.status(500).json({ 
-        error: 'Failed to fetch publications. The service might be temporarily unavailable.' 
+      res.status(500).json({
+        error: 'Failed to fetch publications. The service might be temporarily unavailable.'
       });
     }
   }
@@ -216,41 +296,45 @@ const searchPublicationsController = async (req, res) => {
 const advancedSearchController = async (req, res) => {
   try {
     const { q, type, author, title, year } = req.query;
-    
+
     if (!q && !author && !title) {
-      return res.status(400).json({ 
-        error: 'At least one search parameter (q, author, or title) is required' 
+      return res.status(400).json({
+        error: 'At least one search parameter (q, author, or title) is required'
       });
     }
-    
+
     // Build search query based on parameters
     let searchQuery = '';
     if (author) searchQuery += `author:${author} `;
     if (title) searchQuery += `"${title}" `;
     if (q) searchQuery += q;
-    if (year) searchQuery += ` year:${year}`;
-    
+
     searchQuery = searchQuery.trim();
-    
+
     console.log(`Advanced search query: "${searchQuery}"`);
-    
+
     // Parse and analyze the search query
     const { cleanedQuery, searchTypes, extractedYear } = parseSearchQuery(searchQuery);
-    const optimizedQuery = buildSearchQuery(cleanedQuery, searchTypes, extractedYear);
-    const apiQuery = optimizedQuery.toLowerCase();
-    
+    const optimizedQuery = buildSearchQuery(cleanedQuery, searchTypes);
+    const effectiveYear = year ? parseInt(year, 10) : extractedYear;
+    const searchOptions = effectiveYear ? { year: effectiveYear } : {};
+
     if (extractedYear) {
       console.log(`Extracted year: ${extractedYear}`);
     }
-    
-    // Get publications from model
-    let publications = await searchPublications(apiQuery);
-    
+
+    let publications = await searchWithFallback({
+      rawQuery: searchQuery,
+      cleanedQuery: optimizedQuery,
+      searchTypes,
+      extractedYear: effectiveYear
+    });
+
     // Apply filtering and ranking
-    publications = filterAndRankResults(publications, searchTypes, searchQuery, extractedYear);
-    
+    publications = filterAndRankResults(publications, searchTypes, searchQuery, effectiveYear);
+
     res.json(publications);
-    
+
   } catch (error) {
     console.error('Advanced search error:', error.message);
     res.status(500).json({ error: 'Advanced search failed' });
