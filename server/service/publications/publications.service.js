@@ -108,18 +108,25 @@ const extractPublicationType = (result) => {
 // Search publications using SerpApi Google Scholar with pagination
 const searchWithSerpApi = async (query) => {
   const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.error('SerpApi API_KEY is missing from environment variables');
+    throw new Error('SerpApi API_KEY not configured');
+  }
+
   const maxResultsPerRequest = 20;
   let allResults = [];
   let start = 0;
   let hasMoreResults = true;
   
-  console.log('Starting pagination to fetch all results...');
+  console.log(`[SerpApi] Starting search for query: "${query}"`);
   
   while (hasMoreResults) {
     const scholarApiUrl = `https://serpapi.com/search.json?engine=google_scholar&q=${encodeURIComponent(query)}&api_key=${apiKey}&start=${start}&num=${maxResultsPerRequest}`;
+    console.log(`[SerpApi] Requesting URL (start=${start}): ${scholarApiUrl.replace(/api_key=[^&]+/, 'api_key=REDACTED')}`);
     
     try {
       const response = await axios.get(scholarApiUrl, { timeout: 15000 });
+      console.log(`[SerpApi] Response status: ${response.status}, data keys: ${Object.keys(response.data || {})}`);
       
       if (response.data && response.data.organic_results) {
         const pageResults = response.data.organic_results.map((result, index) => {
@@ -162,7 +169,11 @@ const searchWithSerpApi = async (query) => {
         console.log('No organic_results found in response');
       }
     } catch (error) {
-      console.error(`Error fetching page at start=${start}:`, error.message);
+      console.error(`[SerpApi] Error fetching page at start=${start}:`, error.message);
+      if (error.response) {
+        console.error(`[SerpApi] Response status: ${error.response.status}`);
+        console.error(`[SerpApi] Response data:`, error.response.data);
+      }
       hasMoreResults = false;
     }
   }
