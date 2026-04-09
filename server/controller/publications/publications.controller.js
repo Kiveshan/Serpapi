@@ -22,63 +22,6 @@ const dedupePublications = (publications) => {
   return deduped;
 };
 
-const buildSearchPlan = (rawQuery, cleanedQuery, searchTypes, extractedYear) => {
-  const userHasQuotes = rawQuery.includes('"') || rawQuery.includes("'");
-  const words = cleanedQuery.split(/\s+/).filter(Boolean);
-  const wordCount = words.length;
-  const isProbablyLongTitle = wordCount >= 8;
-  const hasOperators = /\b(author:|intitle:|OR|AND|-)\b/i.test(rawQuery);
-
-  const queries = [];
-  const primaryQuery = cleanedQuery;
-
-  queries.push({ query: primaryQuery, options: extractedYear ? { year: extractedYear } : {} });
-
-  if (searchTypes.isORCID) {
-    return queries;
-  }
-
-  if (!hasOperators && searchTypes.isAuthor && !searchTypes.isPaperTitle) {
-    const authorQuery = `author:"${cleanedQuery}"`;
-    queries.push({ query: authorQuery, options: extractedYear ? { year: extractedYear } : {} });
-  }
-
-  if (!userHasQuotes && searchTypes.isPaperTitle && !searchTypes.isAuthor && !isProbablyLongTitle) {
-    const quotedTitleQuery = `"${cleanedQuery}"`;
-    queries.push({ query: quotedTitleQuery, options: extractedYear ? { year: extractedYear } : {} });
-  }
-
-  if (extractedYear) {
-    queries.push({
-      query: primaryQuery,
-      options: { yearFrom: extractedYear - 1, yearTo: extractedYear + 1 }
-    });
-  }
-
-  return queries;
-};
-
-const searchWithFallback = async ({ rawQuery, cleanedQuery, searchTypes, extractedYear }) => {
-  const plan = buildSearchPlan(rawQuery, cleanedQuery, searchTypes, extractedYear);
-  let merged = [];
-
-  for (let i = 0; i < plan.length; i++) {
-    const { query, options } = plan[i];
-    const results = await searchPublications(query, options);
-    merged = dedupePublications(merged.concat(results));
-
-    if (i === 0 && merged.length >= 30) {
-      break;
-    }
-    if (i === 1 && merged.length >= 30) {
-      break;
-    }
-  }
-
-  return merged;
-};
-
-// Advanced search query parser
 const parseSearchQuery = (query) => {
   const cleanedQuery = cleanText(query);
   const searchTypes = {
@@ -144,7 +87,7 @@ const parseSearchQuery = (query) => {
 };
 
 // Build optimized search query based on search type
-const buildSearchQuery = (cleanedQuery, searchTypes) => {   // removed extractedYear param
+const buildSearchQuery = (cleanedQuery, searchTypes) => {
   let optimizedQuery = cleanedQuery;
 
   if (searchTypes.isORCID) {
@@ -262,12 +205,7 @@ const searchPublicationsController = async (req, res) => {
       console.log(`Extracted year: ${extractedYear}`);
     }
 
-    let publications = await searchWithFallback({
-      rawQuery: query,
-      cleanedQuery: optimizedQuery,
-      searchTypes,
-      extractedYear
-    });
+    let publications = await searchPublications(optimizedQuery, searchOptions);
 
     publications = filterAndRankResults(publications, searchTypes, query, extractedYear);
     console.log(`After filtering/ranking: ${publications.length} relevant publications`);
@@ -323,12 +261,7 @@ const advancedSearchController = async (req, res) => {
       console.log(`Extracted year: ${extractedYear}`);
     }
 
-    let publications = await searchWithFallback({
-      rawQuery: searchQuery,
-      cleanedQuery: optimizedQuery,
-      searchTypes,
-      extractedYear: effectiveYear
-    });
+    let publications = await searchPublications(optimizedQuery, searchOptions);
 
     // Apply filtering and ranking
     publications = filterAndRankResults(publications, searchTypes, searchQuery, effectiveYear);
