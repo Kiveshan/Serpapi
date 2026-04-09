@@ -1,27 +1,5 @@
 const { searchPublications, cleanText } = require('../../service/publications/publications.service');
 
-const dedupePublications = (publications) => {
-  const seen = new Set();
-  const deduped = [];
-
-  for (const pub of publications || []) {
-    const urlKey = (pub && pub.url) ? String(pub.url).trim().toLowerCase() : '';
-    const titleKey = (pub && pub.title) ? String(pub.title).trim().toLowerCase() : '';
-    const yearKey = (pub && pub.year) ? String(pub.year).trim() : '';
-    const key = urlKey || `${titleKey}__${yearKey}`;
-
-    if (!key) {
-      deduped.push(pub);
-      continue;
-    }
-    if (seen.has(key)) continue;
-    seen.add(key);
-    deduped.push(pub);
-  }
-
-  return deduped;
-};
-
 const parseSearchQuery = (query) => {
   const cleanedQuery = cleanText(query);
   const searchTypes = {
@@ -46,7 +24,7 @@ const parseSearchQuery = (query) => {
     ? cleanedQuery.replace(/\b(19|20)\d{2}\b/, '').trim()
     : cleanedQuery;
 
-  // ORCID detection (e.g. 0000-0002-1825-0097)
+  // ORCID detection
   const orcidPattern = /^\d{4}-\d{4}-\d{4}-\d{4}$/;
   if (orcidPattern.test(queryWithoutYear.replace(/\s/g, ''))) {
     searchTypes.isORCID = true;
@@ -91,7 +69,7 @@ const buildSearchQuery = (cleanedQuery, searchTypes) => {
   let optimizedQuery = cleanedQuery;
 
   if (searchTypes.isORCID) {
-    optimizedQuery = cleanedQuery;                    // just the ORCID number
+    optimizedQuery = cleanedQuery; // just the ORCID number
   }
   else if (searchTypes.isPaperTitle && !searchTypes.isAuthor) {
     optimizedQuery = cleanedQuery;
@@ -99,7 +77,6 @@ const buildSearchQuery = (cleanedQuery, searchTypes) => {
   else if (searchTypes.isAuthor && !searchTypes.isPaperTitle) {
     optimizedQuery = cleanedQuery;
   }
-  // Mixed case → leave as-is (SerpApi handles it well)
 
   return optimizedQuery;
 };
@@ -118,11 +95,11 @@ const filterAndRankResults = (publications, searchTypes, originalQuery, extracte
     if (extractedYear) {
       const pubYear = parseInt(pub.year);
       if (pubYear === extractedYear) {
-        score += 100; // Exact year match gets highest bonus
+        score += 100;
       } else if (pubYear && Math.abs(pubYear - extractedYear) <= 2) {
-        score += 50; // Close year gets bonus
+        score += 50;
       } else if (pubYear && Math.abs(pubYear - extractedYear) > 5) {
-        score -= 30; // Distant years get penalty
+        score -= 30;
       }
     }
 

@@ -16,14 +16,11 @@ const extractCitations = (text) => {
 const extractYear = (result) => {
   const summary = result.publication_info?.summary || '';
   const snippet = result.snippet || '';
-
-  // Prefer explicit year from publication_info.summary (typically: "Author - Venue, YEAR - ...")
   const summaryYearMatches = summary.match(/\b(19|20)\d{2}\b/g);
   if (summaryYearMatches && summaryYearMatches.length > 0) {
     return summaryYearMatches[summaryYearMatches.length - 1];
   }
 
-  // Fall back to snippet, but pick the most plausible year (avoid citation years etc.)
   const snippetYearMatches = snippet.match(/\b(19|20)\d{2}\b/g);
   if (snippetYearMatches && snippetYearMatches.length > 0) {
     const years = snippetYearMatches
@@ -121,7 +118,6 @@ const searchWithSerpApi = async (query, options = {}) => {
   while (hasMoreResults) {
     let scholarApiUrl = `https://serpapi.com/search.json?engine=google_scholar&q=${encodeURIComponent(query)}&api_key=${apiKey}&start=${start}&num=${maxResultsPerRequest}`;
 
-    // ← THIS IS THE KEY FIX
     if (options.year) {
       scholarApiUrl += `&as_ylo=${options.year}&as_yhi=${options.year}`;
     } else if (options.yearFrom || options.yearTo) {
@@ -145,7 +141,7 @@ const searchWithSerpApi = async (query, options = {}) => {
             ? result.publication_info.authors.map(a => a.name || a).filter(Boolean)
             : [];
 
-          const year = extractYear(result);                    // ← improved
+          const year = extractYear(result);
           const publicationType = extractPublicationType(result);
 
           return {

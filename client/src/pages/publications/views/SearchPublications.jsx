@@ -140,7 +140,6 @@ const SearchPublications = () => {
   const [type, setType] = useState('all');
   const [page, setPage] = useState(1);
 
-  // Check authentication and fetch user data
   useEffect(() => {
     const checkAuth = async () => {
       try {
