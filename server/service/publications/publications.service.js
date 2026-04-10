@@ -133,7 +133,7 @@ const searchWithSerpApi = async (query, options = {}) => {
     }
 
     try {
-      const response = await axios.get(scholarApiUrl, { timeout: 15000 });
+      const response = await axios.get(scholarApiUrl);
 
       if (response.data?.organic_results) {
         const pageResults = response.data.organic_results.map((result, index) => {

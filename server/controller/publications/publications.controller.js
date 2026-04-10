@@ -188,7 +188,7 @@ const searchPublicationsController = async (req, res) => {
     console.log(`After filtering/ranking: ${publications.length} relevant publications`);
 
     // Add delay before sending response (increased for pagination)
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    //await new Promise(resolve => setTimeout(resolve, 1000));
 
     res.json(publications);
 
