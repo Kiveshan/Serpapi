@@ -1,4 +1,5 @@
 const { searchPublications, cleanText } = require('../../service/publications/publications.service');
+const { addDhetAccreditationToPublications } = require('../../service/publications/dhet.service');
 
 const parseSearchQuery = (query) => {
   const cleanedQuery = cleanText(query);
@@ -187,6 +188,10 @@ const searchPublicationsController = async (req, res) => {
     publications = filterAndRankResults(publications, searchTypes, query, extractedYear);
     console.log(`After filtering/ranking: ${publications.length} relevant publications`);
 
+    // Add DHET accreditation info
+    publications = await addDhetAccreditationToPublications(publications);
+    console.log(`After DHET accreditation check: ${publications.filter(p => p.dhetAccredited).length} accredited publications`);
+
     // Add delay before sending response (increased for pagination)
     //await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -242,6 +247,10 @@ const advancedSearchController = async (req, res) => {
 
     // Apply filtering and ranking
     publications = filterAndRankResults(publications, searchTypes, searchQuery, effectiveYear);
+
+    // Add DHET accreditation info
+    publications = await addDhetAccreditationToPublications(publications);
+    console.log(`After DHET accreditation check: ${publications.filter(p => p.dhetAccredited).length} accredited publications`);
 
     res.json(publications);
 

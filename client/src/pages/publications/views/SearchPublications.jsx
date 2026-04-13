@@ -75,7 +75,8 @@ const exportToExcel = (rows) => {
     'Authors',
     'Year',
     'Publication Type',
-    'Venue/Journal',
+    'Journal/Conference/Book',
+    'DHET Accredited',
     'Citations',
     'URL',
     'PDF Link',
@@ -88,6 +89,7 @@ const exportToExcel = (rows) => {
     row.year || '',
     TYPE_LABEL_BY_VALUE[row.publicationType] || 'Other',
     row.venue || '',
+    row.dhetAccredited ? 'Yes' : 'No', // DHET accreditation from search results
     row.citations || 0,
     formatUrl(row.url),
     formatUrl(row.pdfUrl),
@@ -109,6 +111,7 @@ const exportToExcel = (rows) => {
     { wch: 8 },
     { wch: 18 },
     { wch: 28 },
+    { wch: 15 }, // DHET Accredited column
     { wch: 10 },
     { wch: 45 },
     { wch: 45 },
