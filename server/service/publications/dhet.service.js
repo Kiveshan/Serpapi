@@ -2,7 +2,6 @@ const ExcelJS = require('exceljs');
 const fs = require('fs').promises;
 const path = require('path');
 
-// Normalize header names (from reference code)
 const normalizeHeader = (h) => {
   return String(h || '')
     .trim()
@@ -11,11 +10,9 @@ const normalizeHeader = (h) => {
     .replace(/[^a-z0-9_]/g, '');
 };
 
-// Find DHET journal title column
 const findDhetJournalColumn = (headers) => {
   const normalizedHeaders = headers.map(normalizeHeader);
   
-  // Look for "JOURNAL TITLE" variations based on your DHET file
   const candidates = [
     'journal_title_previous_title_if_applicable',
     'journal_title',
@@ -33,10 +30,9 @@ const findDhetJournalColumn = (headers) => {
   return -1;
 };
 
-// Load DHET accredited journals
 const loadDhetJournals = async (dhetFilePath) => {
   try {
-    // Check if file exists
+    // Checking if file exists
     await fs.access(dhetFilePath);
     
     const workbook = new ExcelJS.Workbook();
@@ -50,7 +46,7 @@ const loadDhetJournals = async (dhetFilePath) => {
     
     for await (const row of worksheet) {
       if (headerRow) {
-        // Find the journal title column
+        // Finding the journal title column
         const headers = row.values.slice(1); // Remove first null element
         journalColumnIndex = findDhetJournalColumn(headers);
         headerRow = false;
@@ -74,19 +70,16 @@ const loadDhetJournals = async (dhetFilePath) => {
   }
 };
 
-// Check if publication is DHET accredited
+// Checking if publication is DHET accredited
 const checkDhetAccreditation = (publication, dhetJournals) => {
   const pubTitle = (publication.title || '').toLowerCase().trim();
   const pubVenue = (publication.venue || '').toLowerCase().trim();
   
-  // Check against DHET journal titles
   for (const dhetJournal of dhetJournals) {
-    // Exact match
     if (pubTitle === dhetJournal || pubVenue === dhetJournal) {
       return true;
     }
     
-    // Contains match (more lenient)
     if (pubTitle.includes(dhetJournal) || dhetJournal.includes(pubTitle) ||
         pubVenue.includes(dhetJournal) || dhetJournal.includes(pubVenue)) {
       return true;
@@ -96,12 +89,12 @@ const checkDhetAccreditation = (publication, dhetJournals) => {
   return false;
 };
 
-// Cache DHET journals to avoid reloading
+// Caching DHET journals to avoid reloading
 let dhetJournalsCache = null;
 let dhetLastLoaded = null;
-const CACHE_DURATION = 3600000; // 1 hour
+const CACHE_DURATION = 3600000; // An hour
 
-// Get DHET journals with caching
+// Getting DHET journals with caching
 const getDhetJournals = async () => {
   const dhetFilePath = process.env.DHET_FILE_PATH || path.join(__dirname, '../../../consolidated_publications_no_duplicates2.xlsx');
   

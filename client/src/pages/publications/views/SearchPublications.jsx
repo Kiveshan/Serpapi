@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ChevronLeft, ChevronRight, Download, Filter, Link as LinkIcon, Loader2, Search, X } from 'lucide-react';
+import { Download, Filter, Link as LinkIcon, Loader2, Search, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import styles from '../css/SearchPublications.module.css';
 import NavBar from '../../../components/NavBar';
@@ -32,15 +32,6 @@ const TYPE_LABEL_BY_VALUE = {
   thesis: 'Thesis',
   preprint: 'Preprint',
   report: 'Technical Report',
-};
-
-const normalizeType = (venue = '') => {
-  const v = venue.toLowerCase();
-  if (v.includes('journal')) return 'journal';
-  if (v.includes('conference') || v.includes('proceedings')) return 'conference';
-  if (v.includes('thesis') || v.includes('dissertation')) return 'thesis';
-  if (v.includes('book')) return 'book';
-  return 'all';
 };
 
 const getYearNumber = (year) => {
@@ -76,11 +67,11 @@ const exportToExcel = (rows) => {
     'Year',
     'Publication Type',
     'Journal/Conference/Book',
-    'DHET Accredited',
     'Citations',
     'URL',
     'PDF Link',
-    'Abstract'
+    'Abstract',
+    'DHET Accredited'
   ];
 
   const dataRows = rows.map((row) => [
@@ -89,11 +80,11 @@ const exportToExcel = (rows) => {
     row.year || '',
     TYPE_LABEL_BY_VALUE[row.publicationType] || 'Other',
     row.venue || '',
-    row.dhetAccredited ? 'Yes' : 'No', // DHET accreditation from search results
     row.citations || 0,
     formatUrl(row.url),
     formatUrl(row.pdfUrl),
-    row.abstract || ''
+    row.abstract || '',
+    row.dhetAccredited ? 'Yes' : 'No'
   ]);
 
   const worksheet = XLSX.utils.aoa_to_sheet([header, ...dataRows]);
@@ -111,11 +102,11 @@ const exportToExcel = (rows) => {
     { wch: 8 },
     { wch: 18 },
     { wch: 28 },
-    { wch: 15 }, // DHET Accredited column
     { wch: 10 },
     { wch: 45 },
     { wch: 45 },
-    { wch: 80 }
+    { wch: 80 },
+    { wch: 15 }
   ];
   worksheet['!cols'] = colWidths;
 
@@ -156,7 +147,6 @@ const SearchPublications = () => {
         setUser(userData);
         setAuthLoading(false);
       } catch (err) {
-        // If token is invalid, clear it and redirect to login
         authAPI.removeToken();
         navigate('/login');
       }

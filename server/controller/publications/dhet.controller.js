@@ -1,6 +1,5 @@
 const { addDhetAccreditationToPublications } = require('../../service/publications/dhet.service');
 
-// Check DHET accreditation for publications
 const checkDhetAccreditationController = async (req, res) => {
   try {
     const { publications } = req.query;
@@ -20,10 +19,8 @@ const checkDhetAccreditationController = async (req, res) => {
       return res.status(400).json({ error: 'Publications must be an array' });
     }
 
-    // Add DHET accreditation info to publications
     const publicationsWithAccreditation = await addDhetAccreditationToPublications(parsedPublications);
 
-    // Return just the accreditation status for each publication
     const accreditationResults = publicationsWithAccreditation.map(pub => ({
       title: pub.title,
       accredited: pub.dhetAccredited

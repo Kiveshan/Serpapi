@@ -1,7 +1,6 @@
 const axios = require('axios');
 require('dotenv').config();
 
-// Helper function to clean text
 const cleanText = (text) => {
   return text ? text.replace(/\s+/g, ' ').trim() : '';
 };
@@ -45,7 +44,6 @@ const extractPublicationType = (result) => {
   // Combine all text sources for type detection
   const allText = `${venue} ${summary} ${snippet}`;
 
-  // Check for journal indicators (expanded patterns)
   if (allText.includes('journal') || allText.includes('j.') ||
     allText.includes('vol.') || allText.includes('volume') ||
     allText.includes('issue') || allText.includes('iss.') ||
@@ -55,7 +53,6 @@ const extractPublicationType = (result) => {
     return 'journal';
   }
 
-  // Check for conference indicators (expanded patterns)
   if (allText.includes('conference') || allText.includes('proceedings') ||
     allText.includes('proc.') || allText.includes('workshop') ||
     allText.includes('symposium') || allText.includes('int.') ||
@@ -66,7 +63,6 @@ const extractPublicationType = (result) => {
     return 'conference';
   }
 
-  // Check for thesis indicators (expanded patterns)
   if (allText.includes('thesis') || allText.includes('dissertation') ||
     allText.includes('phd') || allText.includes('master') ||
     allText.includes('university') || allText.includes('dept.') ||
@@ -75,7 +71,6 @@ const extractPublicationType = (result) => {
     return 'thesis';
   }
 
-  // Check for book indicators (expanded patterns)
   if (allText.includes('book') || allText.includes('edition') ||
     allText.includes('publisher') || allText.includes('press') ||
     allText.includes('isbn') || allText.includes('chapter') ||
@@ -85,19 +80,16 @@ const extractPublicationType = (result) => {
     return 'book';
   }
 
-  // Check for preprint/arxiv indicators
   if (allText.includes('arxiv') || allText.includes('preprint') ||
     allText.includes('biorxiv') || allText.includes('medrxiv')) {
     return 'preprint';
   }
 
-  // Check for technical report
   if (allText.includes('technical report') || allText.includes('tech report') ||
     allText.includes('tr-') || allText.includes('memo')) {
     return 'report';
   }
 
-  // Log for debugging purposes
   if (allText.length > 0) {
     console.log(`Type detection - Venue: "${venue}", Summary: "${summary.substring(0, 100)}...", Snippet: "${snippet.substring(0, 100)}..."`);
   }
