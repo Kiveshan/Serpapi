@@ -1,5 +1,6 @@
 const { searchPublications, cleanText } = require('../../service/publications/publications.service');
 const { addDhetAccreditationToPublications } = require('../../service/publications/dhet.service');
+const { checkDhetApproval } = require('../../service/publications/dhetEmbeddingApproval.service');
 
 const parseSearchQuery = (query) => {
   const cleanedQuery = cleanText(query);
@@ -192,6 +193,25 @@ const searchPublicationsController = async (req, res) => {
     publications = await addDhetAccreditationToPublications(publications);
     console.log(`After DHET accreditation check: ${publications.filter(p => p.dhetAccredited).length} accredited publications`);
 
+    // Add DHET embedding approval info
+    if (publications.length > 0) {
+      const titles = publications.map(p => p.title || '').filter(Boolean);
+      const approvalResult = await checkDhetApproval(titles);
+      if (!approvalResult.error && approvalResult.results) {
+        const approvalMap = new Map(approvalResult.results.map(r => [r.search_text, r]));
+        publications = publications.map(pub => {
+          const approval = approvalMap.get(pub.title);
+          return {
+            ...pub,
+            dhetApproved: approval ? approval.approved : false,
+            dhetSimilarity: approval ? approval.similarity : 0,
+            dhetBestMatch: approval ? approval.best_match : null
+          };
+        });
+        console.log(`After DHET embedding approval check: ${publications.filter(p => p.dhetApproved).length} approved publications`);
+      }
+    }
+
     // Add delay before sending response (increased for pagination)
     //await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -252,6 +272,25 @@ const advancedSearchController = async (req, res) => {
     publications = await addDhetAccreditationToPublications(publications);
     console.log(`After DHET accreditation check: ${publications.filter(p => p.dhetAccredited).length} accredited publications`);
 
+    // Add DHET embedding approval info
+    if (publications.length > 0) {
+      const titles = publications.map(p => p.title || '').filter(Boolean);
+      const approvalResult = await checkDhetApproval(titles);
+      if (!approvalResult.error && approvalResult.results) {
+        const approvalMap = new Map(approvalResult.results.map(r => [r.search_text, r]));
+        publications = publications.map(pub => {
+          const approval = approvalMap.get(pub.title);
+          return {
+            ...pub,
+            dhetApproved: approval ? approval.approved : false,
+            dhetSimilarity: approval ? approval.similarity : 0,
+            dhetBestMatch: approval ? approval.best_match : null
+          };
+        });
+        console.log(`After DHET embedding approval check: ${publications.filter(p => p.dhetApproved).length} approved publications`);
+      }
+    }
+
     res.json(publications);
 
   } catch (error) {
@@ -265,8 +304,85 @@ const healthCheckController = (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 };
 
+// Export publications to Excel with DHET approval info
+const exportPublicationsController = async (req, res) => {
+  try {
+    const { publications } = req.body;
+    
+    if (!Array.isArray(publications) || publications.length === 0) {
+      return res.status(400).json({ error: 'Publications array is required' });
+    }
+
+    // Add DHET embedding approval info if not already present
+    const titles = publications.map(p => p.title || '').filter(Boolean);
+    let enrichedPublications = publications;
+    
+    if (titles.length > 0) {
+      const approvalResult = await checkDhetApproval(titles);
+      if (!approvalResult.error && approvalResult.results) {
+        const approvalMap = new Map(approvalResult.results.map(r => [r.search_text, r]));
+        enrichedPublications = publications.map(pub => {
+          const approval = approvalMap.get(pub.title);
+          return {
+            ...pub,
+            dhetApproved: approval ? approval.approved : false,
+            dhetSimilarity: approval ? approval.similarity : 0,
+            dhetBestMatch: approval ? approval.best_match : null
+          };
+        });
+      }
+    }
+
+    // Create Excel workbook
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Publications');
+
+    // Define columns
+    worksheet.columns = [
+      { header: 'Title', key: 'title', width: 50 },
+      { header: 'Authors', key: 'authors', width: 40 },
+      { header: 'Year', key: 'year', width: 10 },
+      { header: 'Venue', key: 'venue', width: 30 },
+      { header: 'Citations', key: 'citations', width: 12 },
+      { header: 'DHET Accredited', key: 'dhetAccredited', width: 15 },
+      { header: 'DHET Approved (Embedding)', key: 'dhetApproved', width: 20 },
+      { header: 'DHET Similarity', key: 'dhetSimilarity', width: 15 },
+      { header: 'DHET Best Match', key: 'dhetBestMatch', width: 40 }
+    ];
+
+    // Add data rows
+    enrichedPublications.forEach(pub => {
+      worksheet.addRow({
+        title: pub.title || '',
+        authors: Array.isArray(pub.authors) ? pub.authors.join('; ') : (pub.authors || ''),
+        year: pub.year || '',
+        venue: pub.venue || '',
+        citations: pub.citations || 0,
+        dhetAccredited: pub.dhetAccredited ? 'Yes' : 'No',
+        dhetApproved: pub.dhetApproved ? 'Yes' : 'No',
+        dhetSimilarity: pub.dhetSimilarity ? pub.dhetSimilarity.toFixed(3) : '0',
+        dhetBestMatch: pub.dhetBestMatch || ''
+      });
+    });
+
+    // Set response headers
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=publications_with_dhet_approval.xlsx');
+
+    // Send file
+    await workbook.xlsx.write(res);
+    res.end();
+
+  } catch (error) {
+    console.error('Error exporting publications:', error);
+    res.status(500).json({ error: 'Failed to export publications' });
+  }
+};
+
 module.exports = {
   searchPublicationsController,
   advancedSearchController,
-  healthCheckController
+  healthCheckController,
+  exportPublicationsController
 };

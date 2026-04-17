@@ -44,13 +44,12 @@ const loadDhetJournals = async (dhetFilePath) => {
     let headerRow = true;
     let journalColumnIndex = -1;
     
-    for await (const row of worksheet) {
-      if (headerRow) {
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) {
         // Finding the journal title column
         const headers = row.values.slice(1); // Remove first null element
         journalColumnIndex = findDhetJournalColumn(headers);
-        headerRow = false;
-        continue;
+        return;
       }
       
       if (journalColumnIndex >= 0) {
@@ -59,7 +58,7 @@ const loadDhetJournals = async (dhetFilePath) => {
           dhetJournals.add(journalTitle.trim().toLowerCase());
         }
       }
-    }
+    });
     
     console.log(`Loaded ${dhetJournals.size} DHET accredited journals from ${dhetFilePath}`);
     return dhetJournals;
