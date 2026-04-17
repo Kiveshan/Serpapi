@@ -71,7 +71,9 @@ const exportToExcel = (rows) => {
     'URL',
     'PDF Link',
     'Abstract',
-    'DHET Accredited'
+    'DHET Accredited (Exact)',     // old one
+    'DHET Approved (Semantic)',    // new embedding one
+    'DHET Similarity'
   ];
 
   const dataRows = rows.map((row) => [
@@ -84,7 +86,9 @@ const exportToExcel = (rows) => {
     formatUrl(row.url),
     formatUrl(row.pdfUrl),
     row.abstract || '',
-    row.dhetAccredited ? 'Yes' : 'No'
+    row.dhetAccredited ? 'Yes' : 'No',
+    row.dhetApproved ? 'Yes' : 'No',           // ← Add this
+    row.dhetSimilarity ? row.dhetSimilarity.toFixed(3) : '0'  // ← Add this
   ]);
 
   const worksheet = XLSX.utils.aoa_to_sheet([header, ...dataRows]);

@@ -195,8 +195,20 @@ const searchPublicationsController = async (req, res) => {
 
     // Add DHET embedding approval info
     if (publications.length > 0) {
-      const titles = publications.map(p => p.title || '').filter(Boolean);
-      const approvalResult = await checkDhetApproval(titles);
+      const titles = publications.map(p => {
+        let title = (p.title || '').trim();
+
+        // Remove author names, affiliations, etc. that often get appended
+        title = title.split(/Prof\.?|Dr\.?|University of|South Africa/i)[0].trim();
+
+        // Keep only the likely journal/publication title part
+        if (title.length > 150) {
+          title = title.substring(0, 150).trim();
+        }
+
+        return title;
+      }).filter(Boolean);
+      const approvalResult = await checkDhetApproval(titles, 0.7);
       if (!approvalResult.error && approvalResult.results) {
         const approvalMap = new Map(approvalResult.results.map(r => [r.search_text, r]));
         publications = publications.map(pub => {
@@ -274,8 +286,20 @@ const advancedSearchController = async (req, res) => {
 
     // Add DHET embedding approval info
     if (publications.length > 0) {
-      const titles = publications.map(p => p.title || '').filter(Boolean);
-      const approvalResult = await checkDhetApproval(titles);
+      const titles = publications.map(p => {
+        let title = (p.title || '').trim();
+
+        // Remove author names, affiliations, etc. that often get appended
+        title = title.split(/Prof\.?|Dr\.?|University of|South Africa/i)[0].trim();
+
+        // Keep only the likely journal/publication title part
+        if (title.length > 150) {
+          title = title.substring(0, 150).trim();
+        }
+
+        return title;
+      }).filter(Boolean);
+      const approvalResult = await checkDhetApproval(titles, 0.7);
       if (!approvalResult.error && approvalResult.results) {
         const approvalMap = new Map(approvalResult.results.map(r => [r.search_text, r]));
         publications = publications.map(pub => {
@@ -308,17 +332,29 @@ const healthCheckController = (req, res) => {
 const exportPublicationsController = async (req, res) => {
   try {
     const { publications } = req.body;
-    
+
     if (!Array.isArray(publications) || publications.length === 0) {
       return res.status(400).json({ error: 'Publications array is required' });
     }
 
     // Add DHET embedding approval info if not already present
-    const titles = publications.map(p => p.title || '').filter(Boolean);
+    const titles = publications.map(p => {
+      let title = (p.title || '').trim();
+
+      // Remove author names, affiliations, etc. that often get appended
+      title = title.split(/Prof\.?|Dr\.?|University of|South Africa/i)[0].trim();
+
+      // Keep only the likely journal/publication title part
+      if (title.length > 150) {
+        title = title.substring(0, 150).trim();
+      }
+
+      return title;
+    }).filter(Boolean);
     let enrichedPublications = publications;
-    
+
     if (titles.length > 0) {
-      const approvalResult = await checkDhetApproval(titles);
+      const approvalResult = await checkDhetApproval(titles, 0.7);
       if (!approvalResult.error && approvalResult.results) {
         const approvalMap = new Map(approvalResult.results.map(r => [r.search_text, r]));
         enrichedPublications = publications.map(pub => {
