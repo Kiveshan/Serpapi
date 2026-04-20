@@ -70,9 +70,7 @@ const exportToExcel = (rows) => {
     'Citations',
     'URL',
     'PDF Link',
-    'Abstract',
-    'DHET Accredited (Exact)',     // old one
-    'DHET Approved (Semantic)',    // new embedding one
+    'DHET Approved',
     'DHET Similarity'
   ];
 
@@ -85,10 +83,8 @@ const exportToExcel = (rows) => {
     row.citations || 0,
     formatUrl(row.url),
     formatUrl(row.pdfUrl),
-    row.abstract || '',
-    row.dhetAccredited ? 'Yes' : 'No',
-    row.dhetApproved ? 'Yes' : 'No',           // ← Add this
-    row.dhetSimilarity ? row.dhetSimilarity.toFixed(3) : '0'  // ← Add this
+    row.dhetApproved ? 'Yes' : 'No',
+    row.dhetSimilarity ? row.dhetSimilarity.toFixed(3) : '0'
   ]);
 
   const worksheet = XLSX.utils.aoa_to_sheet([header, ...dataRows]);
@@ -109,7 +105,7 @@ const exportToExcel = (rows) => {
     { wch: 10 },
     { wch: 45 },
     { wch: 45 },
-    { wch: 80 },
+    { wch: 15 },
     { wch: 15 }
   ];
   worksheet['!cols'] = colWidths;
