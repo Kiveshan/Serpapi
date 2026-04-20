@@ -27,8 +27,9 @@ DB_CONFIG = {
 
 DHET_CACHE = {
     "loaded": False,
-    "titles": [],
-    "embeddings": None,
+    "titles": [],  # From dhet_embedding table (journal titles)
+    "embeddings": None,  # Title embeddings from dhet_embedding
+    "authors": [],  # Authors from dhet_embedding table
 }
 
 
@@ -75,9 +76,10 @@ def load_dhet_cache(force: bool = False):
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
+            # Load only from dhet_embedding table (source of truth)
             cur.execute(
                 """
-                SELECT title, title_embeded
+                SELECT title, title_embeded, author
                 FROM public.dhet_embedding
                 ORDER BY embed_id;
                 """
@@ -87,15 +89,68 @@ def load_dhet_cache(force: bool = False):
         titles = [r[0] for r in rows]
         emb_np = np.array([r[1] for r in rows], dtype=np.float32)
         emb_t = torch.tensor(emb_np, dtype=torch.float32, device=DEVICE)
+        authors = [r[2] or "" for r in rows]
 
         DHET_CACHE["titles"] = titles
         DHET_CACHE["embeddings"] = emb_t
+        DHET_CACHE["authors"] = authors
         DHET_CACHE["loaded"] = True
         return DHET_CACHE
     finally:
         conn.close()
 
-def check_dhet_approval(search_texts, similarity_threshold: float = 0.9):
+def normalize_text(text):
+    """Normalize text for comparison by lowercasing and removing extra spaces."""
+    if not text:
+        return ""
+    return str(text).lower().strip()
+
+
+def check_venue_in_dhet(venue, titles):
+    """Check if venue is a substring of any DHET title from dhet_embedding."""
+    if not venue:
+        return False, None
+
+    norm_venue = normalize_text(venue)
+    if not norm_venue:
+        return False, None
+
+    # Check against titles from dhet_embedding only
+    for title in titles:
+        norm_title = normalize_text(title)
+        if norm_venue in norm_title or norm_title in norm_venue:
+            return True, title
+
+    return False, None
+
+
+def check_authors_match(serpapi_authors, dhet_authors):
+    """Check if any SerpAPI authors match DHET authors from dhet_embedding."""
+    if not serpapi_authors:
+        return False
+
+    # Parse SerpAPI authors (semicolon-separated)
+    serpapi_author_list = [a.strip() for a in serpapi_authors.split(';') if a.strip()]
+    if not serpapi_author_list:
+        return False
+
+    # Normalize SerpAPI authors
+    norm_serpapi_authors = [normalize_text(a) for a in serpapi_author_list]
+
+    # Check against dhet_embedding authors only
+    for dhet_author in dhet_authors:
+        if not dhet_author:
+            continue
+        norm_dhet = normalize_text(dhet_author)
+        for norm_serp in norm_serpapi_authors:
+            # Check for exact match or substring match
+            if norm_serp == norm_dhet or norm_serp in norm_dhet or norm_dhet in norm_serp:
+                return True
+
+    return False
+
+
+def check_dhet_approval(search_texts, venues=None, authors=None, similarity_threshold: float = 0.9):
     cache = load_dhet_cache()
     if not cache["loaded"] or cache["embeddings"] is None or not cache["titles"]:
         return {"error": "DHET embeddings cache is empty"}
@@ -107,10 +162,16 @@ def check_dhet_approval(search_texts, similarity_threshold: float = 0.9):
     if not search_texts:
         return {"error": "No valid search texts"}
 
+    # Ensure venues and authors are lists of same length
+    if venues is None:
+        venues = [""] * len(search_texts)
+    if authors is None:
+        authors = [""] * len(search_texts)
+
     search_emb_np = sentence_embedding(search_texts)
     if len(search_emb_np) == 0:
         return {"error": "Failed to generate embeddings for search texts"}
-    
+
     search_emb = torch.tensor(np.array(search_emb_np, dtype=np.float32), dtype=torch.float32, device=DEVICE)
 
     sim = util.cos_sim(search_emb, cache["embeddings"])
@@ -120,12 +181,28 @@ def check_dhet_approval(search_texts, similarity_threshold: float = 0.9):
         row = sim[i]
         best_idx = int(torch.argmax(row).item())
         best_score = float(row[best_idx].item())
+
+        # Check venue match against DHET titles only (for informational purposes)
+        venue = venues[i] if i < len(venues) else ""
+        venue_match, venue_match_text = check_venue_in_dhet(venue, cache["titles"])
+
+        # Check author match against DHET authors only (for informational purposes)
+        author = authors[i] if i < len(authors) else ""
+        author_match = check_authors_match(author, cache["authors"])
+
+        # Approval is based STRICTLY on similarity threshold
+        # Venue and author matches are informational only
+        is_approved = best_score >= similarity_threshold
+
         results.append(
             {
                 "search_text": text,
                 "similarity": best_score,
                 "best_match": cache["titles"][best_idx],
-                "approved": best_score >= similarity_threshold,
+                "approved": is_approved,
+                "venue_match": venue_match,
+                "venue_match_text": venue_match_text,
+                "author_match": author_match,
             }
         )
 
@@ -177,8 +254,8 @@ def store_approval_results(results: list[dict]):
         conn.close()
 
 
-def process_search_results(search_texts, similarity_threshold: float = 0.9):
-    checked = check_dhet_approval(search_texts, similarity_threshold)
+def process_search_results(search_texts, venues=None, authors=None, similarity_threshold: float = 0.9):
+    checked = check_dhet_approval(search_texts, venues, authors, similarity_threshold)
     if "error" in checked:
         return checked
 
@@ -186,10 +263,14 @@ def process_search_results(search_texts, similarity_threshold: float = 0.9):
     inserted = store_approval_results(results)
 
     approved_count = sum(1 for r in results if r["approved"])
+    venue_match_count = sum(1 for r in results if r.get("venue_match"))
+    author_match_count = sum(1 for r in results if r.get("author_match"))
     return {
         "total_processed": len(results),
         "approved_count": approved_count,
         "rejected_count": len(results) - approved_count,
+        "venue_match_count": venue_match_count,
+        "author_match_count": author_match_count,
         "inserted": inserted,
         "results": results,
     }
@@ -200,12 +281,18 @@ def handle_request(payload: dict):
 
     if action == "load_cache":
         cache = load_dhet_cache(force=True)
-        return {"status": "cache_loaded", "titles_count": len(cache["titles"])}
+        return {
+            "status": "cache_loaded",
+            "titles_count": len(cache["titles"]),
+            "authors_count": len(cache["authors"])
+        }
 
     if action == "check_dhet_approval":
         search_texts = payload.get("search_texts") or []
+        venues = payload.get("venues") or []
+        authors = payload.get("authors") or []
         similarity_threshold = float(payload.get("similarity_threshold", 0.9))
-        return process_search_results(search_texts, similarity_threshold)
+        return process_search_results(search_texts, venues, authors, similarity_threshold)
 
     return {"error": "Unknown action"}
 
