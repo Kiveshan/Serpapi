@@ -73,7 +73,10 @@ const exportToExcel = (rows) => {
     'DHET Approved',
     'DHET Title Similarity',
     'DHET Venue Similarity',
-    'DHET Author Similarity'
+    'DHET Author Similarity',
+    'DHET Overall Score',
+    'DHET Author Match',
+    'DHET Venue Match'
   ];
 
   const dataRows = rows.map((row) => [
@@ -88,7 +91,10 @@ const exportToExcel = (rows) => {
     row.dhetApproved ? 'Yes' : 'No',
     row.dhetSimilarity ? row.dhetSimilarity.toFixed(3) : '0',
     row.dhetVenueSimilarity ? row.dhetVenueSimilarity.toFixed(3) : '0',
-    row.dhetAuthorSimilarity ? row.dhetAuthorSimilarity.toFixed(3) : '0'
+    row.dhetAuthorSimilarity ? row.dhetAuthorSimilarity.toFixed(3) : '0',
+    ((row.dhetSimilarity * 0.4) + (row.dhetAuthorSimilarity * 0.3) + (row.dhetVenueSimilarity * 0.3)).toFixed(3),
+    row.dhetAuthorMatch || '',
+    row.dhetVenueMatch || ''
   ]);
 
   const worksheet = XLSX.utils.aoa_to_sheet([header, ...dataRows]);
@@ -112,7 +118,11 @@ const exportToExcel = (rows) => {
     { wch: 15 },
     { wch: 18 },
     { wch: 18 },
-    { wch: 18 }
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 40 },
+    { wch: 30 },
+    { wch: 30 }
   ];
   worksheet['!cols'] = colWidths;
 

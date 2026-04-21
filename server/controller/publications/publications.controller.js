@@ -421,11 +421,13 @@ const exportPublicationsController = async (req, res) => {
       { header: 'DHET Venue Similarity', key: 'dhetVenueSimilarity', width: 18 },
       { header: 'DHET Best Match', key: 'dhetBestMatch', width: 40 },
       { header: 'DHET Author Match', key: 'dhetAuthorMatch', width: 30 },
-      { header: 'DHET Venue Match', key: 'dhetVenueMatch', width: 30 }
+      { header: 'DHET Venue Match', key: 'dhetVenueMatch', width: 30 },
+      { header: 'DHET Overall Score', key: 'dhetOverallScore', width: 18 }
     ];
 
     // Add data rows
     enrichedPublications.forEach(pub => {
+      const dhetOverallScore = (pub.dhetSimilarity * 0.4) + (pub.dhetAuthorSimilarity * 0.3) + (pub.dhetVenueSimilarity * 0.3);
       worksheet.addRow({
         title: pub.title || '',
         authors: Array.isArray(pub.authors) ? pub.authors.join('; ') : (pub.authors || ''),
@@ -439,7 +441,8 @@ const exportPublicationsController = async (req, res) => {
         dhetVenueSimilarity: pub.dhetVenueSimilarity ? pub.dhetVenueSimilarity.toFixed(3) : '0',
         dhetBestMatch: pub.dhetBestMatch || '',
         dhetAuthorMatch: pub.dhetAuthorMatch || '',
-        dhetVenueMatch: pub.dhetVenueMatch || ''
+        dhetVenueMatch: pub.dhetVenueMatch || '',
+        dhetOverallScore: dhetOverallScore.toFixed(3)
       });
     });
 
