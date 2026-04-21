@@ -78,7 +78,7 @@ const sendToPython = (payload) => {
   });
 };
 
-const checkDhetApproval = async (titles, venues = [], authors = [], similarityThreshold = 0.9) => {
+const checkDhetApproval = async (titles, venues, authors, similarityThreshold = 0.85) => {
   if (!Array.isArray(titles) || titles.length === 0) {
     return { results: [] };
   }
@@ -86,8 +86,8 @@ const checkDhetApproval = async (titles, venues = [], authors = [], similarityTh
   const payload = {
     action: 'check_dhet_approval',
     search_texts: titles,
-    venues: venues.length === titles.length ? venues : [],
-    authors: authors.length === titles.length ? authors : [],
+    venues: venues,
+    authors: authors,
     similarity_threshold: similarityThreshold
   };
 

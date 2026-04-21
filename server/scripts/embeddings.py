@@ -22,7 +22,8 @@ DB_CONFIG = {
 }
 
 EXCEL_FILE = Path("../../consolidated_publications_no_duplicates2.xlsx")  # adjust path if needed
-COLUMN_NAME = "JOURNAL TITLE                                      (Previous title if applicable)"
+TITLE_COLUMN = "JOURNAL TITLE                                      (Previous title if applicable)"
+AUTHOR_COLUMN = "EDITOR'S DETAILS                                                    (when available)"
 
 def _load_model():
     if LOCAL_MODEL_DIR.exists():
@@ -53,8 +54,18 @@ def sentenceembedding(text):
 def get_db_connection():
     return psycopg2.connect(**DB_CONFIG)
 
+def extract_author(author_text):
+    """Extract author name from EDITOR'S DETAILS column (before first comma)."""
+    if not author_text or pd.isna(author_text) or str(author_text).strip() == "nan":
+        return None
+    author_str = str(author_text).strip()
+    # Extract part before first comma
+    if "," in author_str:
+        return author_str.split(",")[0].strip()
+    return author_str
+
 def embed_and_store_dhet_titles():
-    """Main function: read Excel, generate embeddings, store in DB."""
+    """Main function: read Excel, generate embeddings, store in DB with author and venue."""
     if not EXCEL_FILE.exists():
         print(json.dumps({"error": f"Excel file not found: {EXCEL_FILE}"}))
         return
@@ -62,45 +73,70 @@ def embed_and_store_dhet_titles():
     print("Loading Excel file...")
     df = pd.read_excel(EXCEL_FILE, engine="openpyxl")
     
-    if COLUMN_NAME not in df.columns:
-        print(json.dumps({"error": f"Column '{COLUMN_NAME}' not found in Excel. Available columns: {list(df.columns)}"}))
+    if TITLE_COLUMN not in df.columns:
+        print(json.dumps({"error": f"Column '{TITLE_COLUMN}' not found in Excel. Available columns: {list(df.columns)}"}))
         return
 
-    # Clean and get unique titles (strip whitespace, drop NaN/empty)
-    titles = df[COLUMN_NAME].astype(str).str.strip()
-    titles = titles[titles.notna() & (titles != "nan") & (titles != "")]
-    unique_titles = titles.drop_duplicates().tolist()
+    # Extract authors if column exists
+    has_author_column = AUTHOR_COLUMN in df.columns
+    if has_author_column:
+        print(f"Found author column: {AUTHOR_COLUMN}")
+        df["author"] = df[AUTHOR_COLUMN].apply(extract_author)
+    else:
+        print(f"Author column '{AUTHOR_COLUMN}' not found, will use None for authors")
+        df["author"] = None
 
-    print(f"Found {len(unique_titles)} unique journal titles to embed.")
+    # Clean titles and authors
+    df[TITLE_COLUMN] = df[TITLE_COLUMN].astype(str).str.strip()
+    df = df[df[TITLE_COLUMN].notna() & (df[TITLE_COLUMN] != "nan") & (df[TITLE_COLUMN] != "")]
 
-    if not unique_titles:
+    # Create combined text for embedding: title + " " + author
+    df["combined_text"] = df.apply(
+        lambda row: f"{row[TITLE_COLUMN]} {row['author']}" if row['author'] else row[TITLE_COLUMN],
+        axis=1
+    )
+
+    # Get unique combined texts
+    unique_data = df[[TITLE_COLUMN, "author", "combined_text"]].drop_duplicates(subset=[TITLE_COLUMN])
+    unique_combined_texts = unique_data["combined_text"].tolist()
+
+    print(f"Found {len(unique_combined_texts)} unique journal titles to embed.")
+
+    if not unique_combined_texts:
         print(json.dumps({"error": "No valid titles found in the column."}))
         return
 
     # Generate embeddings in batch (more efficient)
-    print("Generating embeddings...")
-    embeddings = sentenceembedding(unique_titles)  # returns numpy array
+    print("Generating embeddings for title + author...")
+    embeddings = sentenceembedding(unique_combined_texts)  # returns numpy array
 
-    # Prepare data for batch insert: (title, embedding_list)
-    data = [(title, emb.tolist()) for title, emb in zip(unique_titles, embeddings)]
+    # Prepare data for batch insert into dhet_embedding
+    embedding_data = []
+    for _, row in unique_data.iterrows():
+        idx = unique_data.index.get_loc(_)
+        embedding_data.append((
+            row[TITLE_COLUMN],
+            row["author"],
+            embeddings[idx].tolist()
+        ))
 
     # Insert into DB
     conn = get_db_connection()
     try:
-        
         with conn.cursor() as cur:
-            # Use execute_values for fast batch insert
-            # ON CONFLICT DO NOTHING prevents duplicates based on UNIQUE(title)
-            query = """
-                INSERT INTO "dhet_embedding" (title, title_embeded)
-                VALUES %s
-                ON CONFLICT (title) DO NOTHING;
+            # Clear existing data to avoid conflicts
+            cur.execute("DELETE FROM dhet_embedding")
+
+            # Insert into dhet_embedding with author
+            embedding_query = """
+                INSERT INTO dhet_embedding (title, author, title_embeded)
+                VALUES %s;
             """
-            execute_values(cur, query, data)
-        
+            execute_values(cur, embedding_query, embedding_data)
+
         conn.commit()
-        print(f"Successfully inserted/updated {len(data)} embeddings into dhet_embedding table.")
-    
+        print(f"Successfully inserted {len(embedding_data)} embeddings into dhet_embedding table.")
+
     except Exception as e:
         conn.rollback()
         print(json.dumps({"error": f"Database error: {str(e)}"}))

@@ -71,9 +71,9 @@ const exportToExcel = (rows) => {
     'URL',
     'PDF Link',
     'DHET Approved',
-    'DHET Similarity',
-    'DHET Venue Match',
-    'DHET Author Match'
+    'DHET Title Similarity',
+    'DHET Venue Similarity',
+    'DHET Author Similarity'
   ];
 
   const dataRows = rows.map((row) => [
@@ -87,8 +87,8 @@ const exportToExcel = (rows) => {
     formatUrl(row.pdfUrl),
     row.dhetApproved ? 'Yes' : 'No',
     row.dhetSimilarity ? row.dhetSimilarity.toFixed(3) : '0',
-    row.dhetVenueMatch ? 'Yes' : 'No',
-    row.dhetAuthorMatch ? 'Yes' : 'No'
+    row.dhetVenueSimilarity ? row.dhetVenueSimilarity.toFixed(3) : '0',
+    row.dhetAuthorSimilarity ? row.dhetAuthorSimilarity.toFixed(3) : '0'
   ]);
 
   const worksheet = XLSX.utils.aoa_to_sheet([header, ...dataRows]);
@@ -110,7 +110,7 @@ const exportToExcel = (rows) => {
     { wch: 45 },
     { wch: 45 },
     { wch: 15 },
-    { wch: 15 },
+    { wch: 18 },
     { wch: 18 },
     { wch: 18 }
   ];

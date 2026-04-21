@@ -208,10 +208,13 @@ const searchPublicationsController = async (req, res) => {
 
         return title;
       }).filter(Boolean);
-
       const venues = publications.map(p => (p.venue || '').trim());
-      const authors = publications.map(p => (p.authors || []).join('; '));
-
+      const authors = publications.map(p => {
+        if (Array.isArray(p.authors)) {
+          return p.authors.join('; ').trim();
+        }
+        return (p.authors || '').trim();
+      });
       const approvalResult = await checkDhetApproval(titles, venues, authors, 0.85);
       if (!approvalResult.error && approvalResult.results) {
         const approvalMap = new Map(approvalResult.results.map(r => [r.search_text, r]));
@@ -220,10 +223,12 @@ const searchPublicationsController = async (req, res) => {
           return {
             ...pub,
             dhetApproved: approval ? approval.approved : false,
-            dhetSimilarity: approval ? approval.similarity : 0,
+            dhetSimilarity: approval ? approval.title_similarity : 0,
+            dhetVenueSimilarity: approval ? approval.venue_similarity : 0,
+            dhetAuthorSimilarity: approval ? approval.author_similarity : 0,
             dhetBestMatch: approval ? approval.best_match : null,
-            dhetVenueMatch: approval ? approval.venue_match : false,
-            dhetAuthorMatch: approval ? approval.author_match : false
+            dhetAuthorMatch: approval ? approval.author_match : null,
+            dhetVenueMatch: approval ? approval.venue_match : null
           };
         });
         console.log(`After DHET embedding approval check: ${publications.filter(p => p.dhetApproved).length} approved publications`);
@@ -305,11 +310,14 @@ const advancedSearchController = async (req, res) => {
 
         return title;
       }).filter(Boolean);
-
       const venues = publications.map(p => (p.venue || '').trim());
-      const authors = publications.map(p => (p.authors || []).join('; '));
-
-      const approvalResult = await checkDhetApproval(titles, venues, authors, 0.7);
+      const authors = publications.map(p => {
+        if (Array.isArray(p.authors)) {
+          return p.authors.join('; ').trim();
+        }
+        return (p.authors || '').trim();
+      });
+      const approvalResult = await checkDhetApproval(titles, venues, authors, 0.85);
       if (!approvalResult.error && approvalResult.results) {
         const approvalMap = new Map(approvalResult.results.map(r => [r.search_text, r]));
         publications = publications.map(pub => {
@@ -317,10 +325,12 @@ const advancedSearchController = async (req, res) => {
           return {
             ...pub,
             dhetApproved: approval ? approval.approved : false,
-            dhetSimilarity: approval ? approval.similarity : 0,
+            dhetSimilarity: approval ? approval.title_similarity : 0,
+            dhetVenueSimilarity: approval ? approval.venue_similarity : 0,
+            dhetAuthorSimilarity: approval ? approval.author_similarity : 0,
             dhetBestMatch: approval ? approval.best_match : null,
-            dhetVenueMatch: approval ? approval.venue_match : false,
-            dhetAuthorMatch: approval ? approval.author_match : false
+            dhetAuthorMatch: approval ? approval.author_match : null,
+            dhetVenueMatch: approval ? approval.venue_match : null
           };
         });
         console.log(`After DHET embedding approval check: ${publications.filter(p => p.dhetApproved).length} approved publications`);
@@ -363,14 +373,17 @@ const exportPublicationsController = async (req, res) => {
 
       return title;
     }).filter(Boolean);
-
     const venues = publications.map(p => (p.venue || '').trim());
-    const authors = publications.map(p => (p.authors || []).join('; '));
-
+    const authors = publications.map(p => {
+      if (Array.isArray(p.authors)) {
+        return p.authors.join('; ').trim();
+      }
+      return (p.authors || '').trim();
+    });
     let enrichedPublications = publications;
 
     if (titles.length > 0) {
-      const approvalResult = await checkDhetApproval(titles, venues, authors, 0.7);
+      const approvalResult = await checkDhetApproval(titles, venues, authors, 0.85);
       if (!approvalResult.error && approvalResult.results) {
         const approvalMap = new Map(approvalResult.results.map(r => [r.search_text, r]));
         enrichedPublications = publications.map(pub => {
@@ -378,10 +391,12 @@ const exportPublicationsController = async (req, res) => {
           return {
             ...pub,
             dhetApproved: approval ? approval.approved : false,
-            dhetSimilarity: approval ? approval.similarity : 0,
+            dhetSimilarity: approval ? approval.title_similarity : 0,
+            dhetVenueSimilarity: approval ? approval.venue_similarity : 0,
+            dhetAuthorSimilarity: approval ? approval.author_similarity : 0,
             dhetBestMatch: approval ? approval.best_match : null,
-            dhetVenueMatch: approval ? approval.venue_match : false,
-            dhetAuthorMatch: approval ? approval.author_match : false
+            dhetAuthorMatch: approval ? approval.author_match : null,
+            dhetVenueMatch: approval ? approval.venue_match : null
           };
         });
       }
@@ -402,9 +417,11 @@ const exportPublicationsController = async (req, res) => {
       { header: 'DHET Accredited', key: 'dhetAccredited', width: 15 },
       { header: 'DHET Approved (Embedding)', key: 'dhetApproved', width: 20 },
       { header: 'DHET Similarity', key: 'dhetSimilarity', width: 15 },
+      { header: 'DHET Author Similarity', key: 'dhetAuthorSimilarity', width: 18 },
+      { header: 'DHET Venue Similarity', key: 'dhetVenueSimilarity', width: 18 },
       { header: 'DHET Best Match', key: 'dhetBestMatch', width: 40 },
-      { header: 'DHET Venue Match', key: 'dhetVenueMatch', width: 18 },
-      { header: 'DHET Author Match', key: 'dhetAuthorMatch', width: 18 }
+      { header: 'DHET Author Match', key: 'dhetAuthorMatch', width: 30 },
+      { header: 'DHET Venue Match', key: 'dhetVenueMatch', width: 30 }
     ];
 
     // Add data rows
@@ -418,9 +435,11 @@ const exportPublicationsController = async (req, res) => {
         dhetAccredited: pub.dhetAccredited ? 'Yes' : 'No',
         dhetApproved: pub.dhetApproved ? 'Yes' : 'No',
         dhetSimilarity: pub.dhetSimilarity ? pub.dhetSimilarity.toFixed(3) : '0',
+        dhetAuthorSimilarity: pub.dhetAuthorSimilarity ? pub.dhetAuthorSimilarity.toFixed(3) : '0',
+        dhetVenueSimilarity: pub.dhetVenueSimilarity ? pub.dhetVenueSimilarity.toFixed(3) : '0',
         dhetBestMatch: pub.dhetBestMatch || '',
-        dhetVenueMatch: pub.dhetVenueMatch ? 'Yes' : 'No',
-        dhetAuthorMatch: pub.dhetAuthorMatch ? 'Yes' : 'No'
+        dhetAuthorMatch: pub.dhetAuthorMatch || '',
+        dhetVenueMatch: pub.dhetVenueMatch || ''
       });
     });
 
