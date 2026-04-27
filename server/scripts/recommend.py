@@ -2,7 +2,6 @@ import argparse
 import json
 import sys
 from pathlib import Path
-
 import numpy as np
 import psycopg2
 from psycopg2.extras import execute_values
@@ -33,11 +32,9 @@ DHET_CACHE = {
     "venues": [],
 }
 
-
 def _json_write(obj: dict) -> None:
     sys.stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")
     sys.stdout.flush()
-
 
 def get_db_connection():
     return psycopg2.connect(**DB_CONFIG)
@@ -48,7 +45,6 @@ def sentence_embedding(texts):
         texts = [texts]
     if not isinstance(texts, list):
         texts = list(texts)
-    
     # Filter out empty/None texts and ensure strings
     valid_texts = []
     for text in texts:
@@ -68,7 +64,6 @@ def sentence_embedding(texts):
         embeddings = model.encode(valid_texts, show_progress_bar=False, batch_size=32)
 
     return embeddings
-
 
 def load_dhet_cache(force: bool = False):
     if DHET_CACHE["loaded"] and not force:
@@ -185,7 +180,6 @@ def check_author_match(search_authors, dhet_authors):
                 # Extract surnames for comparison
                 search_surname = extract_surname(search_author)
                 dhet_surname = extract_surname(dhet_auth)
-                
                 # Check for exact surname match (highest priority)
                 if search_surname and dhet_surname and search_surname == dhet_surname:
                     matches += 1
@@ -198,20 +192,18 @@ def check_author_match(search_authors, dhet_authors):
         # Calculate similarity as percentage of search authors that matched
         if len(search_author_list) > 0:
             similarity = matches / len(search_author_list)
-            # More flexible matching: if we have at least one strong surname match, 
-            # lower the threshold to 50% for partial matches
+            # More flexible matching: if we have at least one strong surname match,
             has_surname_match = any(
                 extract_surname(sa) == extract_surname(da) 
                 for sa in search_author_list 
                 for da in dhet_author_list
             )
-            threshold = 0.5 if has_surname_match else 0.85
+            threshold = 0.5 if has_surname_match else 0.7
             if similarity >= threshold:
                 return similarity, dhet_author
-    
     return 0.0, None
 
-def check_dhet_approval(search_texts, venues=None, authors=None, similarity_threshold: float = 0.85):
+def check_dhet_approval(search_texts, venues=None, authors=None, similarity_threshold: float = 0.7):
     cache = load_dhet_cache()
     if not cache["loaded"] or cache["embeddings"] is None or not cache["titles"]:
         return {"error": "DHET embeddings cache is empty"}
@@ -261,12 +253,10 @@ def check_dhet_approval(search_texts, venues=None, authors=None, similarity_thre
             cache["authors"]
         )
         
-        # All three checks need to pass the threshold
-        title_passed = title_similarity >= similarity_threshold
-        venue_passed = venue_similarity >= 0.85
-        author_passed = author_similarity >= 0.85
+        # Calculate weighted overall score: 40% title, 40% author, 20% venue
+        overall_score = (title_similarity * 0.35) + (author_similarity * 0.35) + (venue_similarity * 0.3)
         
-        approved = title_passed and venue_passed and author_passed
+        approved = overall_score >= similarity_threshold
         
         results.append(
             {
@@ -282,7 +272,6 @@ def check_dhet_approval(search_texts, venues=None, authors=None, similarity_thre
         )
 
     return {"results": results}
-
 
 def store_approval_results(results: list[dict]):
     if not results:
@@ -330,8 +319,7 @@ def store_approval_results(results: list[dict]):
     finally:
         conn.close()
 
-
-def process_search_results(search_texts, similarity_threshold: float = 0.85, venues=None, authors=None):
+def process_search_results(search_texts, similarity_threshold: float = 0.7, venues=None, authors=None):
     checked = check_dhet_approval(search_texts, venues, authors, similarity_threshold)
     if "error" in checked:
         return checked
@@ -348,7 +336,6 @@ def process_search_results(search_texts, similarity_threshold: float = 0.85, ven
         "results": results,
     }
 
-
 def handle_request(payload: dict):
     action = payload.get("action")
 
@@ -360,11 +347,10 @@ def handle_request(payload: dict):
         search_texts = payload.get("search_texts") or []
         venues = payload.get("venues")
         authors = payload.get("authors")
-        similarity_threshold = float(payload.get("similarity_threshold", 0.85))
+        similarity_threshold = float(payload.get("similarity_threshold", 0.7))
         return process_search_results(search_texts, similarity_threshold, venues, authors)
 
     return {"error": "Unknown action"}
-
 
 def serve_forever(preload_cache: bool = True):
     if preload_cache:
@@ -417,7 +403,6 @@ def main():
         resp = {"error": str(e)}
 
     _json_write(resp)
-
 
 if __name__ == "__main__":
     main()

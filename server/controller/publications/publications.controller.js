@@ -215,7 +215,7 @@ const searchPublicationsController = async (req, res) => {
         }
         return (p.authors || '').trim();
       });
-      const approvalResult = await checkDhetApproval(titles, venues, authors, 0.85);
+      const approvalResult = await checkDhetApproval(titles, venues, authors, 0.7);
       if (!approvalResult.error && approvalResult.results) {
         const approvalMap = new Map(approvalResult.results.map(r => [r.search_text, r]));
         publications = publications.map(pub => {
@@ -317,7 +317,7 @@ const advancedSearchController = async (req, res) => {
         }
         return (p.authors || '').trim();
       });
-      const approvalResult = await checkDhetApproval(titles, venues, authors, 0.85);
+      const approvalResult = await checkDhetApproval(titles, venues, authors, 0.7);
       if (!approvalResult.error && approvalResult.results) {
         const approvalMap = new Map(approvalResult.results.map(r => [r.search_text, r]));
         publications = publications.map(pub => {
@@ -383,7 +383,7 @@ const exportPublicationsController = async (req, res) => {
     let enrichedPublications = publications;
 
     if (titles.length > 0) {
-      const approvalResult = await checkDhetApproval(titles, venues, authors, 0.85);
+      const approvalResult = await checkDhetApproval(titles, venues, authors, 0.7);
       if (!approvalResult.error && approvalResult.results) {
         const approvalMap = new Map(approvalResult.results.map(r => [r.search_text, r]));
         enrichedPublications = publications.map(pub => {
@@ -427,7 +427,7 @@ const exportPublicationsController = async (req, res) => {
 
     // Add data rows
     enrichedPublications.forEach(pub => {
-      const dhetOverallScore = (pub.dhetSimilarity * 0.4) + (pub.dhetAuthorSimilarity * 0.3) + (pub.dhetVenueSimilarity * 0.3);
+      const dhetOverallScore = (pub.dhetSimilarity * 0.35) + (pub.dhetAuthorSimilarity * 0.35) + (pub.dhetVenueSimilarity * 0.3);
       worksheet.addRow({
         title: pub.title || '',
         authors: Array.isArray(pub.authors) ? pub.authors.join('; ') : (pub.authors || ''),

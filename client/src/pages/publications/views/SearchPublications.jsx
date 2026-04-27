@@ -92,7 +92,7 @@ const exportToExcel = (rows) => {
     row.dhetSimilarity ? row.dhetSimilarity.toFixed(3) : '0',
     row.dhetVenueSimilarity ? row.dhetVenueSimilarity.toFixed(3) : '0',
     row.dhetAuthorSimilarity ? row.dhetAuthorSimilarity.toFixed(3) : '0',
-    ((row.dhetSimilarity * 0.4) + (row.dhetAuthorSimilarity * 0.3) + (row.dhetVenueSimilarity * 0.3)).toFixed(3),
+    ((row.dhetSimilarity * 0.35) + (row.dhetAuthorSimilarity * 0.35) + (row.dhetVenueSimilarity * 0.3)).toFixed(3),
     row.dhetAuthorMatch || '',
     row.dhetVenueMatch || ''
   ]);

@@ -3,8 +3,8 @@ import sys
 from pathlib import Path
 import torch
 import pandas as pd
-import psycopg2  # or import psycopg if using psycopg3
-from psycopg2.extras import execute_values  # for efficient batch inserts
+import psycopg2
+from psycopg2.extras import execute_values
 from sentence_transformers import SentenceTransformer
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -12,16 +12,15 @@ LOCAL_MODEL_DIR = Path("/var/app/current/model_cache")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
-# DB connection details - UPDATE THESE with your actual credentials
 DB_CONFIG = {
-    "dbname": "serpapi-app",      # your database name
-    "user": "postgres",       # replace
-    "password": "123456",  # replace
-    "host": "localhost",          # or your DB host
+    "dbname": "serpapi-app",
+    "user": "postgres",
+    "password": "123456",
+    "host": "localhost",
     "port": "5432"
 }
 
-EXCEL_FILE = Path("../../consolidated_publications_no_duplicates2.xlsx")  # adjust path if needed
+EXCEL_FILE = Path("../../consolidated_publications_no_duplicates2.xlsx")
 TITLE_COLUMN = "JOURNAL TITLE                                      (Previous title if applicable)"
 AUTHOR_COLUMN = "EDITOR'S DETAILS                                                    (when available)"
 
@@ -147,10 +146,8 @@ def embed_and_store_dhet_titles():
 if __name__ == "__main__":
     # Support both CLI (for one-time run) and potential JSON input if needed
     if len(sys.argv) > 1 and sys.argv[1] == "--json":
-        # Optional: keep backward compatibility with JSON input if you want
         inputdata = sys.stdin.read()
         data = json.loads(inputdata)
-        # For now we ignore JSON and always run the full process
         embed_and_store_dhet_titles()
     else:
         embed_and_store_dhet_titles()
