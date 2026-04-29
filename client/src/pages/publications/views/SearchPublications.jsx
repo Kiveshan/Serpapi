@@ -73,9 +73,7 @@ const exportToExcel = (rows) => {
     'DHET Approved',
     'DHET Title Similarity',
     'DHET Venue Similarity',
-    'DHET Author Similarity',
     'DHET Overall Score',
-    'DHET Author Match',
     'DHET Venue Match'
   ];
 
@@ -91,9 +89,7 @@ const exportToExcel = (rows) => {
     row.dhetApproved ? 'Yes' : 'No',
     row.dhetSimilarity ? row.dhetSimilarity.toFixed(3) : '0',
     row.dhetVenueSimilarity ? row.dhetVenueSimilarity.toFixed(3) : '0',
-    row.dhetAuthorSimilarity ? row.dhetAuthorSimilarity.toFixed(3) : '0',
-    ((row.dhetSimilarity * 0.35) + (row.dhetAuthorSimilarity * 0.35) + (row.dhetVenueSimilarity * 0.3)).toFixed(3),
-    row.dhetAuthorMatch || '',
+    ((row.dhetSimilarity * 0.5) + (row.dhetVenueSimilarity * 0.5)).toFixed(3),
     row.dhetVenueMatch || ''
   ]);
 
@@ -119,9 +115,6 @@ const exportToExcel = (rows) => {
     { wch: 18 },
     { wch: 18 },
     { wch: 18 },
-    { wch: 18 },
-    { wch: 40 },
-    { wch: 30 },
     { wch: 30 }
   ];
   worksheet['!cols'] = colWidths;

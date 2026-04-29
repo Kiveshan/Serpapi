@@ -78,7 +78,7 @@ const sendToPython = (payload) => {
   });
 };
 
-const checkDhetApproval = async (titles, venues, authors, similarityThreshold = 0.7) => {
+const checkDhetApproval = async (titles, venues, authors, similarityThreshold = 0.9) => {
   if (!Array.isArray(titles) || titles.length === 0) {
     return { results: [] };
   }
