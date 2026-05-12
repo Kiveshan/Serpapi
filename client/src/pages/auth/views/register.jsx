@@ -81,6 +81,8 @@ const Register = () => {
       // Add certificate file
       formData.append('certificate', certificateFile);
 
+      await registerAPI.register(formData);
+
       setSuccess('Registration successful!');
 
       // Redirect to login after 2 seconds
@@ -119,14 +121,14 @@ const Register = () => {
 
               {/* Error and Success Messages */}
               {error && (
-                <div className={styles.errorMessage}>
+                <div data-testid="register-error-message" className={styles.errorMessage}>
                   <AlertCircle size={16} />
                   {error}
                 </div>
               )}
 
               {success && (
-                <div className={styles.successMessage}>
+                <div data-testid="register-success-message" className={styles.successMessage}>
                   <CheckCircle size={16} />
                   {success}
                 </div>
@@ -137,6 +139,7 @@ const Register = () => {
                   <div>
                     <label className={styles.label}>Full name *</label>
                     <input
+                      data-testid="register-fullname-input"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="Jane Smith"
@@ -149,6 +152,7 @@ const Register = () => {
                   <div>
                     <label className={styles.label}>Institution *</label>
                     <select
+                      data-testid="register-institution-select"
                       value={institutionId}
                       onChange={(e) => setInstitutionId(e.target.value)}
                       required
@@ -169,6 +173,7 @@ const Register = () => {
                     <div>
                       <label className={styles.label}>Other Institution *</label>
                       <input
+                        data-testid="register-other-institution-input"
                         value={otherInstitution}
                         onChange={(e) => setOtherInstitution(e.target.value)}
                         placeholder="Enter your institution name"
@@ -182,6 +187,7 @@ const Register = () => {
                   <div>
                     <label className={styles.label}>Institution Email *</label>
                     <input
+                      data-testid="register-email-input"
                       value={institutionEmail}
                       onChange={(e) => setInstitutionEmail(e.target.value)}
                       placeholder="jane.smith@university.edu"
@@ -195,6 +201,7 @@ const Register = () => {
                   <div>
                     <label className={styles.label}>Role *</label>
                     <select
+                      data-testid="register-role-select"
                       value={roleId}
                       onChange={(e) => setRoleId(e.target.value)}
                       required
@@ -213,6 +220,7 @@ const Register = () => {
                   <div>
                     <label className={styles.label}>Password *</label>
                     <input
+                      data-testid="register-password-input"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       type="password"
@@ -236,18 +244,19 @@ const Register = () => {
                       }}
                       disabled={loading}
                     />
-                    <label className={styles.upload} htmlFor="certificate">
+                    <label data-testid="register-upload-area" className={styles.upload} htmlFor="certificate">
                       <Upload size={16} className={styles.uploadIcon} />
                       <div className={styles.uploadText}>
                         <div className={styles.uploadTitle}>Click to upload or drag and drop</div>
                         <div className={styles.uploadHint}>PDF or Word document (max. 100MB)</div>
-                        {certificateFile ? <div className={styles.fileName}>{certificateFile.name}</div> : null}
+                        {certificateFile ? <div data-testid="register-file-name" className={styles.fileName}>{certificateFile.name}</div> : null}
                       </div>
                     </label>
                   </div>
                 </div>
 
                 <button
+                  data-testid="register-submit-button"
                   type="submit"
                   className={styles.primaryButton}
                   disabled={loading}
@@ -257,6 +266,7 @@ const Register = () => {
 
                 <div className={styles.backRow}>
                   <button
+                    data-testid="register-back-button"
                     type="button"
                     onClick={() => navigate('/login')}
                     className={styles.backButton}

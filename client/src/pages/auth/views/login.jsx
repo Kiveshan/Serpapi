@@ -63,7 +63,7 @@ const Login = () => {
 
               {/* Error Message */}
               {error && (
-                <div className={styles.errorMessage}>
+                <div data-testid="login-error-message" className={styles.errorMessage}>
                   <AlertCircle size={16} />
                   {error}
                 </div>
@@ -73,6 +73,7 @@ const Login = () => {
                 <label className={styles.label}>Email address</label>
                 <div className={styles.field}>
                   <input
+                    data-testid="login-email-input"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="email@example.com"
@@ -89,6 +90,7 @@ const Login = () => {
                 <label className={styles.label}>Password</label>
                 <div className={styles.field}>
                   <input
+                    data-testid="login-password-input"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     type={showPassword ? 'text' : 'password'}
@@ -107,13 +109,13 @@ const Login = () => {
                   </button>
                 </div>
 
-                <button type="submit" className={styles.primaryButton} disabled={loading}>
+                <button data-testid="login-submit-button" type="submit" className={styles.primaryButton} disabled={loading}>
                   {loading ? 'Logging in...' : 'Login'} <ArrowRight size={16} />
                 </button>
 
                 <div className={styles.kicker}>NEW TO PUBLICATIONS?</div>
 
-                <button type="button" onClick={() => navigate('/register')} className={styles.secondaryButton} disabled={loading}>
+                <button data-testid="login-register-nav-button" type="button" onClick={() => navigate('/register')} className={styles.secondaryButton} disabled={loading}>
                   Register
                 </button>
               </form>
