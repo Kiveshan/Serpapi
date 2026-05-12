@@ -1,6 +1,7 @@
 const { searchPublications, cleanText } = require('../../service/publications/publications.service');
+const { addDhetAccreditationToPublications } = require('../../service/publications/dhet.service');
+const { checkDhetApproval } = require('../../service/publications/dhetEmbeddingApproval.service');
 
-// Advanced search query parser
 const parseSearchQuery = (query) => {
   const cleanedQuery = cleanText(query);
   const searchTypes = {
@@ -9,10 +10,11 @@ const parseSearchQuery = (query) => {
     isInitials: false,
     isSurname: false,
     isFullName: false,
+    isORCID: false,
     hasYear: false
   };
 
-  // Extract year from query
+  // Extract year
   let extractedYear = null;
   const yearMatch = cleanedQuery.match(/\b(19|20)\d{2}\b/);
   if (yearMatch) {
@@ -20,35 +22,44 @@ const parseSearchQuery = (query) => {
     searchTypes.hasYear = true;
   }
 
-  // Remove year from cleaned query for further processing
-  const queryWithoutYear = extractedYear ? cleanedQuery.replace(/\b(19|20)\d{2}\b/, '').trim() : cleanedQuery;
+  const queryWithoutYear = extractedYear
+    ? cleanedQuery.replace(/\b(19|20)\d{2}\b/, '').trim()
+    : cleanedQuery;
 
-  // Check if it's a paper title (contains quotes or title-like patterns)
-  if (queryWithoutYear.includes('"') || queryWithoutYear.includes("'") || 
-      /^(the|a|an|analysis|study|review|survey|investigation|development|design|implementation|approach|method|algorithm|system|framework|model|theory)/i.test(queryWithoutYear)) {
+  // ORCID detection
+  const orcidPattern = /^\d{4}-\d{4}-\d{4}-\d{4}$/;
+  if (orcidPattern.test(queryWithoutYear.replace(/\s/g, ''))) {
+    searchTypes.isORCID = true;
+    searchTypes.isAuthor = true;
+  }
+
+  // Paper title patterns
+  if (queryWithoutYear.includes('"') || queryWithoutYear.includes("'") ||
+    /^(the|a|an|analysis|study|review|survey|investigation|development|design|implementation|approach|method|algorithm|system|framework|model|theory)/i.test(queryWithoutYear)) {
     searchTypes.isPaperTitle = true;
   }
 
-  // Check for initials pattern (e.g., "J K Smith", "A.B. Cooper")
-  if (/^[A-Z]\.?[A-Z]\.?\s+[A-Z][a-z]/i.test(queryWithoutYear) || 
-      /^[A-Z]\s+[A-Z]\s+[A-Z][a-z]/i.test(queryWithoutYear)) {
+  // Author patterns - FIXED for "N Naicker", "J. Smith", etc.
+  if (/^[A-Z]\.?\s+[A-Z][a-z]+(\s+[A-Z][a-z]+)?$/i.test(queryWithoutYear)) {
+    searchTypes.isInitials = true;   // single initial + surname
+    searchTypes.isAuthor = true;
+  }
+  else if (/^[A-Z]\.?[A-Z]\.?\s+[A-Z][a-z]/i.test(queryWithoutYear) ||
+    /^[A-Z]\s+[A-Z]\s+[A-Z][a-z]/i.test(queryWithoutYear)) {
     searchTypes.isInitials = true;
     searchTypes.isAuthor = true;
   }
-  // Check for surname pattern (single word or two words with last name capitalized)
   else if (/^[A-Z][a-z]+(\s+[A-Z][a-z]+)?$/.test(queryWithoutYear) && queryWithoutYear.split(' ').length <= 2) {
     searchTypes.isSurname = true;
     searchTypes.isAuthor = true;
   }
-  // Check for full name pattern (First Last or First M. Last)
   else if (/^[A-Z][a-z]+\s+[A-Z][a-z]+(\s+[A-Z][a-z]+)*$/.test(queryWithoutYear) ||
-           /^[A-Z][a-z]+\s+[A-Z]\.?\s*[A-Z][a-z]+$/.test(queryWithoutYear)) {
+    /^[A-Z][a-z]+\s+[A-Z]\.?\s*[A-Z][a-z]+$/.test(queryWithoutYear)) {
     searchTypes.isFullName = true;
     searchTypes.isAuthor = true;
   }
-  // Default to general search
-  else {
-    searchTypes.isPaperTitle = true;
+  else if (!searchTypes.isPaperTitle) {
+    // Default fallback
     searchTypes.isAuthor = true;
   }
 
@@ -56,28 +67,17 @@ const parseSearchQuery = (query) => {
 };
 
 // Build optimized search query based on search type
-const buildSearchQuery = (cleanedQuery, searchTypes, extractedYear = null) => {
+const buildSearchQuery = (cleanedQuery, searchTypes) => {
   let optimizedQuery = cleanedQuery;
 
-  if (searchTypes.isPaperTitle && !searchTypes.isAuthor) {
-    // Pure paper title search - add quotes for exact matching
-    if (!cleanedQuery.includes('"')) {
-      optimizedQuery = `"${cleanedQuery}"`;
-    }
-  } else if (searchTypes.isAuthor && !searchTypes.isPaperTitle) {
-    // Pure author search - optimize for author name
-    if (searchTypes.isInitials) {
-      // For initials, keep the original format but ensure it's valid
-      optimizedQuery = cleanedQuery;
-    }
-  } else {
-    // Mixed search - keep as is but optimize
+  if (searchTypes.isORCID) {
+    optimizedQuery = cleanedQuery; // just the ORCID number
+  }
+  else if (searchTypes.isPaperTitle && !searchTypes.isAuthor) {
     optimizedQuery = cleanedQuery;
   }
-
-  // Add year filter if present
-  if (extractedYear) {
-    optimizedQuery += ` year:${extractedYear}`;
+  else if (searchTypes.isAuthor && !searchTypes.isPaperTitle) {
+    optimizedQuery = cleanedQuery;
   }
 
   return optimizedQuery;
@@ -97,11 +97,11 @@ const filterAndRankResults = (publications, searchTypes, originalQuery, extracte
     if (extractedYear) {
       const pubYear = parseInt(pub.year);
       if (pubYear === extractedYear) {
-        score += 100; // Exact year match gets highest bonus
+        score += 100;
       } else if (pubYear && Math.abs(pubYear - extractedYear) <= 2) {
-        score += 50; // Close year gets bonus
+        score += 50;
       } else if (pubYear && Math.abs(pubYear - extractedYear) > 5) {
-        score -= 30; // Distant years get penalty
+        score -= 30;
       }
     }
 
@@ -118,13 +118,13 @@ const filterAndRankResults = (publications, searchTypes, originalQuery, extracte
     if (searchTypes.isAuthor) {
       const authorWords = queryLower.split(' ');
       let authorMatchCount = 0;
-      
+
       authorWords.forEach(word => {
         if (authorsLower.includes(word)) {
           authorMatchCount++;
         }
       });
-      
+
       if (authorMatchCount === authorWords.length) {
         score += 80;
       } else if (authorMatchCount > 0) {
@@ -140,7 +140,7 @@ const filterAndRankResults = (publications, searchTypes, originalQuery, extracte
           }
           return '';
         }).join(' ');
-        
+
         if (authorInitials.toLowerCase().includes(initials.toLowerCase())) {
           score += 60;
         }
@@ -171,42 +171,83 @@ const filterAndRankResults = (publications, searchTypes, originalQuery, extracte
 const searchPublicationsController = async (req, res) => {
   try {
     const { query } = req.params;
-    
+
     // Parse and analyze the search query
     const { cleanedQuery, searchTypes, extractedYear } = parseSearchQuery(query);
-    const optimizedQuery = buildSearchQuery(cleanedQuery, searchTypes, extractedYear);
-    const apiQuery = optimizedQuery.toLowerCase();
-    
-    console.log(`Original query: "${query}"`);
+    const optimizedQuery = buildSearchQuery(cleanedQuery, searchTypes);
+    const searchOptions = extractedYear ? { year: extractedYear } : {};
+
+    console.log(`Original: "${query}" | Optimized: "${optimizedQuery}" | Year filter: ${extractedYear || 'none'}`);
     console.log(`Optimized query: "${optimizedQuery}"`);
-    console.log(`API query: "${apiQuery}"`);
     console.log(`Search types:`, Object.keys(searchTypes).filter(key => searchTypes[key]));
     if (extractedYear) {
       console.log(`Extracted year: ${extractedYear}`);
     }
-    
-    // Get publications from model
-    let publications = await searchPublications(apiQuery);
-    
-    // Apply intelligent filtering and ranking based on search types
+
+    let publications = await searchPublications(optimizedQuery, searchOptions);
+
     publications = filterAndRankResults(publications, searchTypes, query, extractedYear);
     console.log(`After filtering/ranking: ${publications.length} relevant publications`);
-    
+
+    // Add DHET accreditation info
+    publications = await addDhetAccreditationToPublications(publications);
+    console.log(`After DHET accreditation check: ${publications.filter(p => p.dhetAccredited).length} accredited publications`);
+
+    // Add DHET embedding approval info
+    if (publications.length > 0) {
+      const titles = publications.map(p => {
+        let title = (p.title || '').trim();
+
+        // Remove author names, affiliations, etc. that often get appended
+        title = title.split(/Prof\.?|Dr\.?|University of|South Africa/i)[0].trim();
+
+        // Keep only the likely journal/publication title part
+        if (title.length > 150) {
+          title = title.substring(0, 150).trim();
+        }
+
+        return title;
+      }).filter(Boolean);
+      const venues = publications.map(p => (p.venue || '').trim());
+      const authors = publications.map(p => {
+        if (Array.isArray(p.authors)) {
+          return p.authors.join('; ').trim();
+        }
+        return (p.authors || '').trim();
+      });
+      const approvalResult = await checkDhetApproval(titles, venues, authors, 0.9);
+      if (!approvalResult.error && approvalResult.results) {
+        const approvalMap = new Map(approvalResult.results.map(r => [r.search_text, r]));
+        publications = publications.map(pub => {
+          const approval = approvalMap.get(pub.title);
+          return {
+            ...pub,
+            dhetApproved: approval ? approval.approved : false,
+            dhetSimilarity: approval ? approval.title_similarity : 0,
+            dhetVenueSimilarity: approval ? approval.venue_similarity : 0,
+            dhetBestMatch: approval ? approval.best_match : null,
+            dhetVenueMatch: approval ? approval.venue_match : null
+          };
+        });
+        console.log(`After DHET embedding approval check: ${publications.filter(p => p.dhetApproved).length} approved publications`);
+      }
+    }
+
     // Add delay before sending response (increased for pagination)
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    //await new Promise(resolve => setTimeout(resolve, 1000));
+
     res.json(publications);
-    
+
   } catch (error) {
     console.error('Error searching publications:', error.message);
-    
+
     if (error.code === 'ECONNABORTED') {
       res.status(408).json({ error: 'Request timeout. Please try again.' });
     } else if (error.response && error.response.status === 429) {
       res.status(429).json({ error: 'Too many requests. Please try again later.' });
     } else {
-      res.status(500).json({ 
-        error: 'Failed to fetch publications. The service might be temporarily unavailable.' 
+      res.status(500).json({
+        error: 'Failed to fetch publications. The service might be temporarily unavailable.'
       });
     }
   }
@@ -216,41 +257,84 @@ const searchPublicationsController = async (req, res) => {
 const advancedSearchController = async (req, res) => {
   try {
     const { q, type, author, title, year } = req.query;
-    
+
     if (!q && !author && !title) {
-      return res.status(400).json({ 
-        error: 'At least one search parameter (q, author, or title) is required' 
+      return res.status(400).json({
+        error: 'At least one search parameter (q, author, or title) is required'
       });
     }
-    
+
     // Build search query based on parameters
     let searchQuery = '';
     if (author) searchQuery += `author:${author} `;
     if (title) searchQuery += `"${title}" `;
     if (q) searchQuery += q;
-    if (year) searchQuery += ` year:${year}`;
-    
+
     searchQuery = searchQuery.trim();
-    
+
     console.log(`Advanced search query: "${searchQuery}"`);
-    
+
     // Parse and analyze the search query
     const { cleanedQuery, searchTypes, extractedYear } = parseSearchQuery(searchQuery);
-    const optimizedQuery = buildSearchQuery(cleanedQuery, searchTypes, extractedYear);
-    const apiQuery = optimizedQuery.toLowerCase();
-    
+    const optimizedQuery = buildSearchQuery(cleanedQuery, searchTypes);
+    const effectiveYear = year ? parseInt(year, 10) : extractedYear;
+    const searchOptions = effectiveYear ? { year: effectiveYear } : {};
+
     if (extractedYear) {
       console.log(`Extracted year: ${extractedYear}`);
     }
-    
-    // Get publications from model
-    let publications = await searchPublications(apiQuery);
-    
+
+    let publications = await searchPublications(optimizedQuery, searchOptions);
+
     // Apply filtering and ranking
-    publications = filterAndRankResults(publications, searchTypes, searchQuery, extractedYear);
-    
+    publications = filterAndRankResults(publications, searchTypes, searchQuery, effectiveYear);
+
+    // Add DHET accreditation info
+    publications = await addDhetAccreditationToPublications(publications);
+    console.log(`After DHET accreditation check: ${publications.filter(p => p.dhetAccredited).length} accredited publications`);
+
+    // Add DHET embedding approval info
+    if (publications.length > 0) {
+      const titles = publications.map(p => {
+        let title = (p.title || '').trim();
+
+        // Remove author names, affiliations, etc. that often get appended
+        title = title.split(/Prof\.?|Dr\.?|University of|South Africa/i)[0].trim();
+
+        // Keep only the likely journal/publication title part
+        if (title.length > 150) {
+          title = title.substring(0, 150).trim();
+        }
+
+        return title;
+      }).filter(Boolean);
+      const venues = publications.map(p => (p.venue || '').trim());
+      const authors = publications.map(p => {
+        if (Array.isArray(p.authors)) {
+          return p.authors.join('; ').trim();
+        }
+        return (p.authors || '').trim();
+      });
+      const approvalResult = await checkDhetApproval(titles, venues, authors, 0.9);
+      if (!approvalResult.error && approvalResult.results) {
+        const approvalMap = new Map(approvalResult.results.map(r => [r.search_text, r]));
+        publications = publications.map(pub => {
+          const approval = approvalMap.get(pub.title);
+          return {
+            ...pub,
+            dhetApproved: approval ? approval.approved : false,
+            dhetSimilarity: approval ? approval.title_similarity : 0,
+            dhetVenueSimilarity: approval ? approval.venue_similarity : 0,
+            dhetBestMatch: approval ? approval.best_match : null,
+            dhetVenueMatch: approval ? approval.venue_match : null
+          };
+        });
+        console.log(`After DHET embedding approval check: ${publications.filter(p => p.dhetApproved).length} approved publications`);
+      }
+    }
+
     res.json(publications);
-    
+
   } catch (error) {
     console.error('Advanced search error:', error.message);
     res.status(500).json({ error: 'Advanced search failed' });
@@ -262,8 +346,113 @@ const healthCheckController = (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 };
 
+// Export publications to Excel with DHET approval info
+const exportPublicationsController = async (req, res) => {
+  try {
+    const { publications } = req.body;
+
+    if (!Array.isArray(publications) || publications.length === 0) {
+      return res.status(400).json({ error: 'Publications array is required' });
+    }
+
+    // Add DHET embedding approval info if not already present
+    const titles = publications.map(p => {
+      let title = (p.title || '').trim();
+
+      // Remove author names, affiliations, etc. that often get appended
+      title = title.split(/Prof\.?|Dr\.?|University of|South Africa/i)[0].trim();
+
+      // Keep only the likely journal/publication title part
+      if (title.length > 150) {
+        title = title.substring(0, 150).trim();
+      }
+
+      return title;
+    }).filter(Boolean);
+    const venues = publications.map(p => (p.venue || '').trim());
+    const authors = publications.map(p => {
+      if (Array.isArray(p.authors)) {
+        return p.authors.join('; ').trim();
+      }
+      return (p.authors || '').trim();
+    });
+    let enrichedPublications = publications;
+
+    if (titles.length > 0) {
+      const approvalResult = await checkDhetApproval(titles, venues, authors, 0.9);
+      if (!approvalResult.error && approvalResult.results) {
+        const approvalMap = new Map(approvalResult.results.map(r => [r.search_text, r]));
+        enrichedPublications = publications.map(pub => {
+          const approval = approvalMap.get(pub.title);
+          return {
+            ...pub,
+            dhetApproved: approval ? approval.approved : false,
+            dhetSimilarity: approval ? approval.title_similarity : 0,
+            dhetVenueSimilarity: approval ? approval.venue_similarity : 0,
+            dhetBestMatch: approval ? approval.best_match : null,
+            dhetVenueMatch: approval ? approval.venue_match : null
+          };
+        });
+      }
+    }
+
+    // Create Excel workbook
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Publications');
+
+    // Define columns
+    worksheet.columns = [
+      { header: 'Title', key: 'title', width: 50 },
+      { header: 'Authors', key: 'authors', width: 40 },
+      { header: 'Year', key: 'year', width: 10 },
+      { header: 'Venue', key: 'venue', width: 30 },
+      { header: 'Citations', key: 'citations', width: 12 },
+      { header: 'DHET Accredited', key: 'dhetAccredited', width: 15 },
+      { header: 'DHET Approved (Embedding)', key: 'dhetApproved', width: 20 },
+      { header: 'DHET Similarity', key: 'dhetSimilarity', width: 15 },
+      { header: 'DHET Venue Similarity', key: 'dhetVenueSimilarity', width: 18 },
+      { header: 'DHET Best Match', key: 'dhetBestMatch', width: 40 },
+      { header: 'DHET Venue Match', key: 'dhetVenueMatch', width: 30 },
+      { header: 'DHET Overall Score', key: 'dhetOverallScore', width: 18 }
+    ];
+
+    // Add data rows
+    enrichedPublications.forEach(pub => {
+      const dhetOverallScore = (pub.dhetSimilarity * 0.5) + (pub.dhetVenueSimilarity * 0.5);
+      worksheet.addRow({
+        title: pub.title || '',
+        authors: Array.isArray(pub.authors) ? pub.authors.join('; ') : (pub.authors || ''),
+        year: pub.year || '',
+        venue: pub.venue || '',
+        citations: pub.citations || 0,
+        dhetAccredited: pub.dhetAccredited ? 'Yes' : 'No',
+        dhetApproved: pub.dhetApproved ? 'Yes' : 'No',
+        dhetSimilarity: pub.dhetSimilarity ? pub.dhetSimilarity.toFixed(3) : '0',
+        dhetVenueSimilarity: pub.dhetVenueSimilarity ? pub.dhetVenueSimilarity.toFixed(3) : '0',
+        dhetBestMatch: pub.dhetBestMatch || '',
+        dhetVenueMatch: pub.dhetVenueMatch || '',
+        dhetOverallScore: dhetOverallScore.toFixed(3)
+      });
+    });
+
+    // Set response headers
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=publications_with_dhet_approval.xlsx');
+
+    // Send file
+    await workbook.xlsx.write(res);
+    res.end();
+
+  } catch (error) {
+    console.error('Error exporting publications:', error);
+    res.status(500).json({ error: 'Failed to export publications' });
+  }
+};
+
 module.exports = {
   searchPublicationsController,
   advancedSearchController,
-  healthCheckController
+  healthCheckController,
+  exportPublicationsController
 };

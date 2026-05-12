@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ChevronLeft, ChevronRight, Download, Filter, Link as LinkIcon, Loader2, Search, X } from 'lucide-react';
+import { Download, Filter, Link as LinkIcon, Loader2, Search, X } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import styles from '../css/SearchPublications.module.css';
 import NavBar from '../../../components/NavBar';
 import Footer from '../../../components/Footer';
@@ -18,6 +19,7 @@ const TYPE_OPTIONS = [
   { value: 'thesis', label: 'Thesis' },
   { value: 'preprint', label: 'Preprint' },
   { value: 'report', label: 'Technical Report' },
+  { value: 'other', label: 'Other' },
 ];
 
 const PAGE_SIZE = 3;
@@ -32,51 +34,21 @@ const TYPE_LABEL_BY_VALUE = {
   report: 'Technical Report',
 };
 
-const normalizeType = (venue = '') => {
-  const v = venue.toLowerCase();
-  if (v.includes('journal')) return 'journal';
-  if (v.includes('conference') || v.includes('proceedings')) return 'conference';
-  if (v.includes('thesis') || v.includes('dissertation')) return 'thesis';
-  if (v.includes('book')) return 'book';
-  return 'all';
-};
-
 const getYearNumber = (year) => {
   const n = parseInt(String(year || ''), 10);
   return Number.isFinite(n) ? n : null;
 };
 
-const exportToCsv = (rows) => {
+const exportToExcel = (rows) => {
   if (!rows || rows.length === 0) {
     return;
   }
-
-  const header = [
-    'Title',
-    'Authors',
-    'Year',
-    'Publication Type',
-    'Venue/Journal',
-    'Citations',
-    'URL',
-    'PDF Link'
-  ];
-
-  const escape = (value) => {
-    const s = String(value ?? '').trim();
-    if (!s) return '';
-    const needsQuotes = /[\n\r",;]/.test(s);
-    const escaped = s.replace(/"/g, '""');
-    const formatted = escaped
-      .replace(/\t/g, ' ')
-      .replace(/\r?\n/g, ' ');
-    return needsQuotes ? `"${formatted}"` : formatted;
-  };
 
   const formatAuthors = (authors) => {
     if (!authors || !Array.isArray(authors) || authors.length === 0) {
       return '';
     }
+
     return authors
       .filter(author => author && typeof author === 'string')
       .map(author => author.trim())
@@ -89,42 +61,70 @@ const exportToCsv = (rows) => {
     return url.trim();
   };
 
-  const lines = [];
-  lines.push('\uFEFF');
-  lines.push(header.map(escape).join(','));
-  rows.forEach((row, index) => {
-    try {
-      const rowData = [
-        escape(row.title || ''),
-        escape(formatAuthors(row.authors)),
-        escape(row.year || ''),
-        escape(TYPE_LABEL_BY_VALUE[row.publicationType] || 'Other'),
-        escape(row.venue || ''),
-        escape(row.citations || 0),
-        escape(formatUrl(row.url)),
-        escape(formatUrl(row.pdfUrl))
-      ];
-      lines.push(rowData.join(','));
-    } catch (error) {
-      console.error(`Error formatting row ${index}:`, error);
-      lines.push(`"Error formatting row ${index}",,,,,,,`);
-    }
-  });
+  const header = [
+    'Title',
+    'Authors',
+    'Year',
+    'Publication Type',
+    'Journal/Conference/Book',
+    'Citations',
+    'URL',
+    'PDF Link',
+    'DHET Approved',
+    'DHET Title Similarity',
+    'DHET Venue Similarity',
+    'DHET Overall Score',
+    'DHET Venue Match'
+  ];
 
-  const csvContent = lines.join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
+  const dataRows = rows.map((row) => [
+    row.title || '',
+    formatAuthors(row.authors),
+    row.year || '',
+    TYPE_LABEL_BY_VALUE[row.publicationType] || 'Other',
+    row.venue || '',
+    row.citations || 0,
+    formatUrl(row.url),
+    formatUrl(row.pdfUrl),
+    row.dhetApproved ? 'Yes' : 'No',
+    row.dhetSimilarity ? row.dhetSimilarity.toFixed(3) : '0',
+    row.dhetVenueSimilarity ? row.dhetVenueSimilarity.toFixed(3) : '0',
+    ((row.dhetSimilarity * 0.5) + (row.dhetVenueSimilarity * 0.5)).toFixed(3),
+    row.dhetVenueMatch || ''
+  ]);
+
+  const worksheet = XLSX.utils.aoa_to_sheet([header, ...dataRows]);
+
+  worksheet['!autofilter'] = {
+    ref: XLSX.utils.encode_range({
+      s: { r: 0, c: 0 },
+      e: { r: dataRows.length, c: header.length - 1 }
+    })
+  };
+
+  const colWidths = [
+    { wch: 60 },
+    { wch: 35 },
+    { wch: 8 },
+    { wch: 18 },
+    { wch: 28 },
+    { wch: 10 },
+    { wch: 45 },
+    { wch: 45 },
+    { wch: 15 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 30 }
+  ];
+  worksheet['!cols'] = colWidths;
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Publications');
+
   const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
-  const filename = `publications_${timestamp}.csv`;
-  link.href = url;
-  link.download = filename;
-  link.style.display = 'none';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-  console.log(`Exported ${rows.length} publications to ${filename}`);
+  const filename = `publications_${timestamp}.xlsx`;
+  XLSX.writeFile(workbook, filename, { bookType: 'xlsx' });
 };
 
 const SearchPublications = () => {
@@ -143,7 +143,6 @@ const SearchPublications = () => {
   const [type, setType] = useState('all');
   const [page, setPage] = useState(1);
 
-  // Check authentication and fetch user data
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -157,7 +156,6 @@ const SearchPublications = () => {
         setUser(userData);
         setAuthLoading(false);
       } catch (err) {
-        // If token is invalid, clear it and redirect to login
         authAPI.removeToken();
         navigate('/login');
       }
@@ -208,7 +206,7 @@ const SearchPublications = () => {
       const matchesYearFrom = yf != null ? (y != null ? y >= yf : false) : true;
       const matchesYearTo = yt != null ? (y != null ? y <= yt : false) : true;
 
-      const matchesType = type === 'all' ? true : (pub.publicationType || 'all') === type;
+      const matchesType = type === 'all' ? true : (type === 'other' ? (pub.publicationType || 'all') === 'all' : (pub.publicationType || 'all') === type);
 
       return matchesQuery && matchesYearFrom && matchesYearTo && matchesType;
     });
@@ -328,10 +326,10 @@ const SearchPublications = () => {
             <button
               type="button"
               className={styles.secondaryButton}
-              onClick={() => exportToCsv(filtered)}
+              onClick={() => exportToExcel(filtered)}
               disabled={filtered.length === 0 || isLoading}
             >
-              <Download size={16} /> Export to CSV
+              <Download size={16} /> Export to Excel
             </button>
           </form>
 
