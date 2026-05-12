@@ -7,6 +7,7 @@
     "client": "cd client && npm start",
     "server": "cd server && npm run dev",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "test": "jest",
     "install-all": "npm install && cd client && npm install && cd ../server && npm install"
   },
   "keywords": [
@@ -19,6 +20,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "jest": "^30.4.2"
   }
 }
