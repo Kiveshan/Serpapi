@@ -10,9 +10,9 @@ export default async function globalSetup(): Promise<void> {
   const client = new Client({
     user: process.env.DB_USER ?? 'postgres',
     host: process.env.DB_HOST ?? 'localhost',
-    database: process.env.DB_NAME ?? 'serpapi-app',
+    database: process.env.DB_NAME ?? 'Serpapi',
     password: process.env.DB_PASSWORD ?? '123456',
-    port: Number(process.env.DB_PORT ?? 5432),
+    port: Number(process.env.DB_PORT ?? 5433),
   });
 
   await client.connect();

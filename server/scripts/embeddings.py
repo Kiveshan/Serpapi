@@ -13,11 +13,11 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 DB_CONFIG = {
-    "dbname": "serpapi-app",
+    "dbname": "Serpapi",
     "user": "postgres",
     "password": "123456",
     "host": "localhost",
-    "port": "5432"
+    "port": "5433"
 }
 
 EXCEL_FILE = Path("../../consolidated_publications_no_duplicates2.xlsx")

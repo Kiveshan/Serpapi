@@ -17,11 +17,11 @@ model = SentenceTransformer(str(LOCAL_MODEL_DIR) if LOCAL_MODEL_DIR.exists() els
 model.max_seq_length = 256
 
 DB_CONFIG = {
-    "dbname": "serpapi-app",
+    "dbname": "Serpapi",
     "user": "postgres",
     "password": "123456",
     "host": "localhost",
-    "port": "5432",
+    "port": "5433",
 }
 
 DHET_CACHE = {
