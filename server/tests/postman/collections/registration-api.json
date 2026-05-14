@@ -1,0 +1,205 @@
+{
+    "info": {
+        "name": "Registration API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "1. User Registration",
+            "item": [
+                {
+                    "name": "POST /auth/register - Success Case",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "fullname",
+                                    "value": "{{testFullName}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "institutionemail",
+                                    "value": "{{testEmail}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "password",
+                                    "value": "{{testPassword}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "institutionid",
+                                    "value": "1",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "roleid",
+                                    "value": "2",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "certificate",
+                                    "type": "file",
+                                    "src": "{{testCertificatePath}}"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "register"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST /auth/register - Missing Required Fields",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "fullname",
+                                    "value": "Test User",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "register"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "POST /auth/register - Duplicate Email",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "fullname",
+                                    "value": "Duplicate User",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "institutionemail",
+                                    "value": "{{testEmail}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "password",
+                                    "value": "{{testPassword}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "certificate",
+                                    "type": "file",
+                                    "src": "{{testCertificatePath}}"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "register"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "2. Authentication",
+            "item": [
+                {
+                    "name": "POST /auth/login - Valid Credentials",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"institutionemail\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "3. Supporting Data",
+            "item": [
+                {
+                    "name": "GET /auth/institutions",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/institutions",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "institutions"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "GET /auth/roles",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/roles",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "roles"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ]
+}
