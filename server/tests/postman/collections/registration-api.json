@@ -9,6 +9,52 @@
             "item": [
                 {
                     "name": "POST /auth/register - Success Case",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "// Status code validation",
+                                    "pm.test(\"Status code is 201\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "// Response structure validation",
+                                    "pm.test(\"Response has required fields\", function () {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData).to.have.property('message');",
+                                    "    pm.expect(jsonData).to.have.property('user');",
+                                    "    pm.expect(jsonData).to.have.property('token');",
+                                    "});",
+                                    "",
+                                    "// User data validation",
+                                    "pm.test(\"User data is correct\", function () {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData.user.fullname).to.eql(pm.environment.get(\"testFullName\"));",
+                                    "    pm.expect(jsonData.user.institutionemail).to.eql(pm.environment.get(\"testEmail\"));",
+                                    "    pm.expect(jsonData.user.enabled).to.eql(false);",
+                                    "    pm.expect(jsonData.user.status).to.eql('pending');",
+                                    "});",
+                                    "",
+                                    "// Token validation",
+                                    "pm.test(\"Token is valid JWT\", function () {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    const token = jsonData.token;",
+                                    "    const parts = token.split('.');",
+                                    "    pm.expect(parts).to.have.lengthOf(3);",
+                                    "});",
+                                    "",
+                                    "// Set environment variables",
+                                    "if (pm.response.code === 201) {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    pm.environment.set(\"userId\", jsonData.user.userid);",
+                                    "    pm.environment.set(\"authToken\", jsonData.token);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
                     "request": {
                         "method": "POST",
                         "header": [],
@@ -57,11 +103,25 @@
                                 "register"
                             ]
                         }
-                    },
-                    "response": []
+                    }
                 },
                 {
                     "name": "POST /auth/register - Missing Required Fields",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 400\", function () { pm.response.to.have.status(400); });",
+                                    "pm.test(\"Error message is present\", function () {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData).to.have.property('error');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
                     "request": {
                         "method": "POST",
                         "header": [],
@@ -85,11 +145,25 @@
                                 "register"
                             ]
                         }
-                    },
-                    "response": []
+                    }
                 },
                 {
                     "name": "POST /auth/register - Duplicate Email",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 409\", function () { pm.response.to.have.status(409); });",
+                                    "pm.test(\"Error message indicates duplicate email\", function () {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData.error).to.include('already exists');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
                     "request": {
                         "method": "POST",
                         "header": [],
@@ -128,8 +202,7 @@
                                 "register"
                             ]
                         }
-                    },
-                    "response": []
+                    }
                 }
             ]
         },
@@ -138,12 +211,37 @@
             "item": [
                 {
                     "name": "POST /auth/login - Valid Credentials",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                                    "pm.test(\"Response has user and token\", function () {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData).to.have.property('user');",
+                                    "    pm.expect(jsonData).to.have.property('token');",
+                                    "});",
+                                    "if (pm.response.code === 200) {",
+                                    "    const jsonData = pm.response.json();",
+                                    "    pm.environment.set(\"authToken\", jsonData.token);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
                     "request": {
                         "method": "POST",
                         "header": [],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"institutionemail\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}"
+                            "raw": "{\n  \"institutionemail\": \"{{approvedUserEmail}}\",\n  \"password\": \"{{approvedUserPassword}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
                         },
                         "url": {
                             "raw": "{{baseUrl}}/auth/login",
@@ -155,8 +253,7 @@
                                 "login"
                             ]
                         }
-                    },
-                    "response": []
+                    }
                 }
             ]
         },
@@ -167,7 +264,6 @@
                     "name": "GET /auth/institutions",
                     "request": {
                         "method": "GET",
-                        "header": [],
                         "url": {
                             "raw": "{{baseUrl}}/auth/institutions",
                             "host": [
@@ -178,14 +274,12 @@
                                 "institutions"
                             ]
                         }
-                    },
-                    "response": []
+                    }
                 },
                 {
                     "name": "GET /auth/roles",
                     "request": {
                         "method": "GET",
-                        "header": [],
                         "url": {
                             "raw": "{{baseUrl}}/auth/roles",
                             "host": [
@@ -196,8 +290,7 @@
                                 "roles"
                             ]
                         }
-                    },
-                    "response": []
+                    }
                 }
             ]
         }
